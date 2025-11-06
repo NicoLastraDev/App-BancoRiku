@@ -26,7 +26,7 @@ const LoginScreen = () => {
     setIsPosting(false);
 
     if (wasSuccessful) {
-      router.replace('/');
+      router.replace('/(banco-app)/(home)');
       return;
     }
 
