@@ -41,7 +41,7 @@ export const cuentaActions = {
     }
   },
 
-  // Realizar transferencia
+  // Realizar transferencia - ✅ CORREGIDO
   realizarTransferencia: async (transferenciaData: {
     cuenta_destino: string;
     monto: number;
@@ -49,8 +49,10 @@ export const cuentaActions = {
   }): Promise<boolean> => {
     try {
       console.log('💸 Realizando transferencia:', transferenciaData);
-      const { data } = await bancoApi.post<{ success: boolean; message: string }>(
-        '/cuenta/transferir', 
+      
+      // ✅ USAR EL NUEVO ENDPOINT
+      const { data } = await bancoApi.post<{ success: boolean; message: string; data: any }>(
+        '/transferencias',  // ← CAMBIADO de '/cuenta/transferir' a '/transferencias'
         transferenciaData
       );
       
@@ -63,7 +65,16 @@ export const cuentaActions = {
       }
     } catch (error: any) {
       console.log('❌ Error realizando transferencia:', error.response?.data);
-      const errorMessage = error.response?.data?.message || 'Error al realizar la transferencia';
+      
+      // Manejar mejor el error
+      let errorMessage = 'Error al realizar la transferencia';
+      
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       Alert.alert('Error', errorMessage);
       return false;
     }
