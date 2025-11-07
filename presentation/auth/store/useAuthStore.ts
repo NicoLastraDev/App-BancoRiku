@@ -1,5 +1,6 @@
 import { authCheckStatus, authLogin, authRegister } from '@/core/auth/actions/authActions';
 import { User } from '@/core/auth/interfaces/user';
+import { cuentaActions } from '@/core/banco/cuentaActions';
 import { Cuenta } from '@/core/banco/interfaces/cuentas';
 import { SecureStorageAdapter } from '@/helpers/adapters/secure-storage-adapter';
 import { create } from 'zustand';
@@ -108,52 +109,23 @@ export const useAuthStore = create<authState>()((set, get) => ({
 
   loadCuenta: async () => {
   try {
-    const { user, token } = get();
+    console.log('🔄 Store: loadCuenta llamado');
     
-    console.log('🔄 loadCuenta - Solicitando datos REALES...');
+    // ✅ SIGUIENDO EL MISMO PATRÓN QUE login/register
+    const resp = await cuentaActions.obtenerCuenta();
     
-    if (!user || !token) {
-      console.log('❌ No hay usuario o token en el store');
-      return;
-    }
-
-    // ✅ URL CORRECTA - /api/cuenta/info
-    const CUENTA_URL = 'http://192.168.1.6:4000/api/cuenta/info';
+    console.log('📦 Store: respuesta de obtenerCuenta:', resp);
     
-    console.log('🌐 Haciendo request a:', CUENTA_URL);
-    
-    const response = await fetch(CUENTA_URL, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    console.log('📡 Response status:', response.status);
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.log('❌ Error del backend:', errorText);
-      throw new Error(`HTTP ${response.status}: ${errorText}`);
-    }
-
-    const data = await response.json();
-    console.log('✅ Datos REALES recibidos del backend:', data);
-
-    if (data.success && data.data) {
-      console.log('🎯 Cuenta REAL establecida:', {
-        numero_cuenta: data.data.numero_cuenta,
-        saldo: data.data.saldo
-      });
-      set({ cuenta: data.data });
+    if (resp) {
+      console.log('✅ Cuenta obtenida exitosamente:', resp.numero_cuenta);
+      set({ cuenta: resp });
     } else {
-      console.log('⚠️ Respuesta inesperada:', data);
-      throw new Error('Formato de respuesta inválido del backend');
+      console.log('❌ loadCuenta: No se pudieron obtener los datos de la cuenta');
     }
     
   } catch (error) {
-    console.log('❌ Error cargando cuenta desde backend:', error);
+    console.log('❌ Error en loadCuenta:', error);
+    // El Alert ya se maneja en cuentaActions.obtenerCuenta()
   }
 },
 

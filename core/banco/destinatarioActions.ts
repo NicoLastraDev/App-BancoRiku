@@ -1,31 +1,50 @@
 import { Alert } from "react-native";
-import bancoApi from "../api/BancoApi";
+import bancoApi from "../api/BancoApi"; // ← Usar tu bancoApi
 import { CreateDestinatarioData, Destinatario } from "../auth/interfaces/destinatarios";
 
 export const destinatarioActions = {
 
-  // Crear nuevo destinatario (sin token en parámetros)
-  crearDestinatario: async(destinatarioData: CreateDestinatarioData) => {
+  // Crear nuevo destinatario
+  crearDestinatario: async (destinatarioData: CreateDestinatarioData): Promise<Destinatario> => {
     try {
       console.log('📨 Creando destinatario:', destinatarioData);
-      const {data} = await bancoApi.post<Destinatario>('/beneficiarios', destinatarioData);
-      console.log('✅ Destinatario creado exitosamente');
-      return data;
+      
+      const { data } = await bancoApi.post<{ success: boolean; message: string }>(
+        '/beneficiarios/add', 
+        destinatarioData
+      );
+
+      if (data.success) {
+        console.log('✅ Destinatario creado exitosamente');
+        // Retornar el destinatario creado (el backend debería retornar el objeto completo)
+        return {
+          id: Date.now(), // Temporal - el backend debería retornar el ID real
+          ...destinatarioData
+        };
+      } else {
+        throw new Error(data.message || 'Error al crear destinatario');
+      }
     } catch (error: any) {
       console.log('❌ Error creando destinatario', error.response?.data);
-      const errorMessage = error.response?.data?.errorMessage || 'Error al crear destinatario';
+      const errorMessage = error.response?.data?.message || 'Error al crear destinatario';
       Alert.alert('Error', errorMessage);
       throw new Error(errorMessage);
     }
   },
 
-  // Obtener todos los destinatarios del usuario (sin token)
-  obtenerDestinatarios: async(): Promise<Destinatario[]> => {
+  // Obtener todos los destinatarios del usuario
+  obtenerDestinatarios: async (): Promise<Destinatario[]> => {
     try {
       console.log('📋 Obteniendo destinatarios...');
-      const {data} = await bancoApi.get<Destinatario[]>('/beneficiarios');
-      console.log('✅ Destinatarios obtenidos:', data.length);
-      return data;
+      
+      const { data } = await bancoApi.get<{ success: boolean; data: Destinatario[] }>('/beneficiarios/list');
+
+      if (data.success) {
+        console.log('✅ Destinatarios obtenidos:', data.data?.length || 0);
+        return data.data || [];
+      } else {
+        throw new Error(data.message || 'Error al obtener destinatarios');
+      }
     } catch (error: any) {
       console.log('❌ Error obteniendo destinatarios:', error.response?.data);
       Alert.alert('Error', 'No se pudieron cargar los destinatarios');
@@ -33,13 +52,22 @@ export const destinatarioActions = {
     }
   },
 
-  // Actualizar destinatario (sin token)
-  actualizarDestinatario: async (id: number, destinatarioData: Partial<CreateDestinatarioData>) => {
+  // Actualizar destinatario
+  actualizarDestinatario: async (id: number, destinatarioData: Partial<CreateDestinatarioData>): Promise<Destinatario> => {
     try {
       console.log('✏️ Actualizando destinatario ID:', id);
-      const { data } = await bancoApi.put<Destinatario>(`/beneficiarios/${id}`, destinatarioData);
-      console.log('✅ Destinatario actualizado');
-      return data;
+      
+      const { data } = await bancoApi.put<{ success: boolean; data: Destinatario }>(
+        `/beneficiarios/update/${id}`, 
+        destinatarioData
+      );
+
+      if (data.success && data.data) {
+        console.log('✅ Destinatario actualizado');
+        return data.data;
+      } else {
+        throw new Error(data.message || 'Error al actualizar el destinatario');
+      }
     } catch (error: any) {
       console.log('❌ Error actualizando destinatario:', error.response?.data);
       const errorMessage = error.response?.data?.message || 'Error al actualizar el destinatario';
@@ -48,13 +76,19 @@ export const destinatarioActions = {
     }
   },
 
-  // Eliminar destinatario (sin token)
+  // Eliminar destinatario
   eliminarDestinatario: async (id: number): Promise<boolean> => {
     try {
       console.log('🗑️ Eliminando destinatario ID:', id);
-      await bancoApi.delete(`/beneficiarios/${id}`);
-      console.log('✅ Destinatario eliminado');
-      return true;
+      
+      const { data } = await bancoApi.delete<{ success: boolean; message: string }>(`/beneficiarios/delete/${id}`);
+
+      if (data.success) {
+        console.log('✅ Destinatario eliminado');
+        return true;
+      } else {
+        throw new Error(data.message || 'Error al eliminar el destinatario');
+      }
     } catch (error: any) {
       console.log('❌ Error eliminando destinatario:', error.response?.data);
       const errorMessage = error.response?.data?.message || 'Error al eliminar el destinatario';
