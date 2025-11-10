@@ -1,10 +1,11 @@
 import { CreateTransferenciaData, Cuenta, Transferencia } from "@/core/banco/interfaces/transferencias";
-import { transferenciaActions } from "@/core/banco/transferencias.actions";
+import { Tarjeta, transferenciaActions } from "@/core/banco/transferencias.actions"; // Importar Tarjeta desde las actions
 import { create } from "zustand";
 
 interface TransferenciaState {
   cuentas: Cuenta[];
   transferencias: Transferencia[];
+  tarjetas: Tarjeta[]; // ✅ Ya está definido
   loading: boolean;
   error: string | null;
   success: boolean;
@@ -16,6 +17,7 @@ interface TransferenciaActions {
   // Datos
   obtenerCuentas: (token: string) => Promise<void>;
   obtenerTransferencias: (token: string) => Promise<void>;
+  obtenerTarjetas: (token: string) => Promise<void>; // ✅ Agregar esta acción
   
   // Transferencia
   realizarTransferencia: (data: CreateTransferenciaData, token: string) => Promise<boolean>;
@@ -29,6 +31,7 @@ interface TransferenciaActions {
   // Utilidades
   obtenerCuentaPorId: (accountId: number) => Cuenta | undefined;
   obtenerSaldoDisponible: (accountId: number) => number;
+  obtenerTarjetaPorId: (id: number) => Tarjeta | undefined; // ✅ Agregar esta utilidad
   
   // Estado
   clearError: () => void;
@@ -40,6 +43,7 @@ export const useTransferenciaStore = create<TransferenciaState & TransferenciaAc
   // Estado inicial
   cuentas: [],
   transferencias: [],
+  tarjetas: [], // ✅ Inicializar tarjetas vacío
   loading: false,
   error: null,
   success: false,
@@ -68,6 +72,17 @@ export const useTransferenciaStore = create<TransferenciaState & TransferenciaAc
     }
   },
 
+  // ✅ Obtener tarjetas del usuario (NUEVA ACCIÓN)
+  obtenerTarjetas: async (token: string) => {
+    set({ loading: true, error: null });
+    try {
+      const tarjetas = await transferenciaActions.obtenerTarjetasUsuario(token);
+      set({ tarjetas, loading: false });
+    } catch (error: any) {
+      set({ error: error.message, loading: false });
+    }
+  },
+
   // Realizar transferencia
   realizarTransferencia: async (data: CreateTransferenciaData, token: string): Promise<boolean> => {
     set({ loading: true, error: null, success: false });
@@ -85,13 +100,13 @@ export const useTransferenciaStore = create<TransferenciaState & TransferenciaAc
       set(state => ({
         cuentas: state.cuentas.map(cuenta =>
           cuenta.id === data.fromAccountId
-            ? { ...cuenta, balance: cuenta.balance - data.amount }
+            ? { ...cuenta, saldo: cuenta.saldo - data.amount }
             : cuenta
         ),
         transferencias: [transferencia, ...state.transferencias],
         loading: false,
         success: true,
-        infoCuentaDestino: null // Limpiar info después de transferencia exitosa
+        infoCuentaDestino: null
       }));
 
       return true;
@@ -158,15 +173,15 @@ export const useTransferenciaStore = create<TransferenciaState & TransferenciaAc
     // Validar saldo
     if (fromAccountId) {
       const cuenta = cuentas.find(c => c.id === fromAccountId);
-      if (cuenta && amount > cuenta.balance) {
-        errors.push(`El monto supera tu saldo disponible ($${cuenta.balance.toFixed(2)})`);
+      if (cuenta && amount > cuenta.saldo) {
+        errors.push(`El monto supera tu saldo disponible ($${cuenta.saldo.toFixed(2)})`);
       }
     }
 
     // Validar que no sea la misma cuenta
     if (fromAccountId && toAccountNumber) {
       const cuentaOrigen = cuentas.find(c => c.id === fromAccountId);
-      if (cuentaOrigen && cuentaOrigen.accountNumber === toAccountNumber) {
+      if (cuentaOrigen && cuentaOrigen.numero_cuenta === toAccountNumber) {
         errors.push('No puedes transferir a la misma cuenta de origen');
       }
     }
@@ -184,7 +199,12 @@ export const useTransferenciaStore = create<TransferenciaState & TransferenciaAc
 
   obtenerSaldoDisponible: (accountId: number) => {
     const cuenta = get().cuentas.find(c => c.id === accountId);
-    return cuenta ? cuenta.balance : 0;
+    return cuenta ? cuenta.saldo : 0;
+  },
+
+  // ✅ Obtener tarjeta por ID (NUEVA UTILIDAD)
+  obtenerTarjetaPorId: (id: number) => {
+    return get().tarjetas.find(tarjeta => tarjeta.id === id);
   },
 
   // Limpiar estados

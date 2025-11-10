@@ -9,27 +9,27 @@ console.log('🔧 === INICIANDO BANCO API ===');
 const config = Constants.expoConfig?.extra || {};
 
 const STAGE = config.EXPO_PUBLIC_STAGE || 'dev';
-const API_URL = config.EXPO_PUBLIC_API_URL || 'http://localhost:4000/api';
+const API_URL_BASE = config.EXPO_PUBLIC_API_URL || 'http://localhost:4000/api';
 const API_URL_IOS = config.EXPO_PUBLIC_API_URL_IOS || 'http://192.168.1.6:4000/api';
 const API_URL_ANDROID = config.EXPO_PUBLIC_API_URL_ANDROID || 'http://192.168.1.6:4000/api';
 
 console.log('🏷️ STAGE:', STAGE);
-console.log('📡 API_URL:', API_URL);
+console.log('📡 API_URL_BASE:', API_URL_BASE);
 
-export const FINAL_API_URL = STAGE === 'prod' 
-  ? API_URL
+export const API_URL = STAGE === 'prod' 
+  ? API_URL_BASE
   : Platform.OS === 'ios'
   ? API_URL_IOS
   : API_URL_ANDROID;
 
-console.log('🎯 URL FINAL:', FINAL_API_URL);
+console.log('🎯 URL FINAL (API_URL):', API_URL);
 
 // ✅ Asegúrate de que bancoApi esté definido incluso si hay error
 let bancoApi;
 
 try {
   bancoApi = axios.create({
-    baseURL: FINAL_API_URL,
+    baseURL: API_URL,
     timeout: 10000,
   });
   

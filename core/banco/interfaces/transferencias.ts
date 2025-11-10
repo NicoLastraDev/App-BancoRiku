@@ -1,27 +1,30 @@
+// interfaces/transferencias.ts
+
 export interface Transferencia {
-  id?: number,
-  fromAccountId: number,
-  toAccountNumber: number,
-  amount: number,
-  currency: number,
-  description?: string,
-  createdAt?: string,
-  status?: 'pendiente' | 'completada' | 'fallida'
+  id: number;
+  fecha: string;
+  tipo_transaccion: 'TRANSFERENCIA_ENVIADA' | 'TRANSFERENCIA_RECIBIDA';
+  monto: number;
+  descripcion?: string;
+  cuenta_destino?: string;
+  numero_cuenta?: string;
+  nombre_destinatario?: string; // Nuevo campo
+  nombre_remitente?: string;    // Nuevo campo
+  created_at?: string;
 }
 
 export interface CreateTransferenciaData {
-  fromAccountId: number,
-  toAccountNumber: string,
-  amount: number,
-  description?: string
+  fromAccountId: number;
+  toAccountNumber: string;
+  amount: number;
+  description?: string;
 }
 
 export interface Cuenta {
-  id: number,
-  accountNumber: string,
-  accountName: string,
-  balance: number,
-  currency: string,
-  type: 'checking' | 'grabada',
-  userid: number
+  id: number;
+  numero_cuenta: string;
+  saldo: number;
+  tipo_cuenta: string;
+  usuario_id: number;
+  accountName?: string;
 }

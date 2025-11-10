@@ -1,145 +1,197 @@
-import axios from "axios";
-import { API_URL } from "../api/BancoApi";
+import bancoApi from "../api/BancoApi";
 import { CreateTransferenciaData, Cuenta, Transferencia } from "./interfaces/transferencias";
+
+// Interface para Tarjeta (agrégala en tu archivo de interfaces)
+export interface Tarjeta {
+  id: number;
+  numero_tarjeta: string;
+  fecha_vencimiento: string;
+  cvv: string;
+  nombre_titular: string;
+  tipo_tarjeta: 'DEBITO' | 'CREDITO';
+  marca_tarjeta: 'VISA' | 'MASTERCARD' | 'AMEX';
+  saldo_actual: number;
+  created_at: string;
+}
 
 export const transferenciaActions = {
 
-  //Crear transferencia
+  // Crear transferencia
   realizarTransferencia: async(data: CreateTransferenciaData, token: string): Promise<Transferencia> => {
-
     try {
-      
-      const response = await axios.post<Transferencia>(`${API_URL}/transferencias`,
-      data,
-      {
-        headers: {
-          'Content-type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
+      const response = await bancoApi.post<Transferencia>('/transferencias', data);
+      return response.data;
+    } catch (error: any) {
+      if(error.response?.data?.message) {
+        throw new Error(error.response.data.message);
       }
-    );
-      return response.data
-    }
-    
-    catch (error: any) {
-      if(axios.isAxiosError(error)){
-        const errorMessage = error.response?.data?.message || error.response?.data?.error || 'Error al realizar la transferencia'
-        throw new Error (errorMessage)
-      }
-      throw new Error ('Error de conexion al realizar la transferencia')
+      throw new Error('Error de conexión al realizar la transferencia');
     }
   },
 
-  //-------------------------------------------------------------------------
-  
-  //Obtener transferencias
+  // Obtener transferencias
   obtenerTransferencias: async(token: string): Promise<Transferencia[]> => {
     try {
+      console.log('🔍 Obteniendo transferencias...');
       
-      const response = await axios.get<Transferencia[]>(`
-        ${API_URL}/transferencias
-        `,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        }
-      );
+      const response = await bancoApi.get<any>('/transferencias');
+      
+      console.log('📦 Respuesta completa:', response);
+      console.log('📊 Respuesta data:', response.data);
+      
+      // Verificar diferentes estructuras posibles
+      if (response.data.success && Array.isArray(response.data.data)) {
+        console.log('✅ Estructura con success:true y data array');
+        return response.data.data;
+      } else if (Array.isArray(response.data)) {
+        console.log('✅ Estructura con array directo');
+        return response.data;
+      } else {
+        console.log('❌ Estructura inesperada:', response.data);
+        throw new Error('Formato de respuesta inválido del servidor');
+      }
 
-      return response.data
-
-    }
-    catch (error: any) {
-      if(axios.isAxiosError(error)){
-        const errorMessage = error.response?.data?.message || 'Error al obtener transferencias'
-        throw new Error (errorMessage)
+    } catch (error: any) {
+      console.log('❌ Error en obtenerTransferencias:', error);
+      
+      if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
       }
       throw new Error('Error de conexión al obtener transferencias');
     }
   },
 
-  //---------------------------------------------------------------------------
-  //obtener cuentas de usuario
-
+  // Obtener cuentas de usuario
   obtenerCuentasUsuario: async (token: string): Promise<Cuenta[]> => {
-
     try {
-      
-      const response = await axios.get<Cuenta[]>(`
-        ${API_URL}/cuentas`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        }
-      );
-
-      return response.data
-    }
-    
-    catch (error) {
-      if (axios.isAxiosError(error)) {
-        const errorMessage = error.response?.data?.message || 'Error al obtener las cuentas';
-        throw new Error(errorMessage);
+      const response = await bancoApi.get<Cuenta[]>('/cuentas');
+      return response.data;
+    } catch (error: any) {
+      if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
       }
       throw new Error('Error de conexión al obtener cuentas');
     }
   },
 
-  /**-------------------------------------------------------------------------
-   * 
-    obtener destinatarios
-   */
+  // Obtener destinatarios
   obtenerDestinatarios: async(token: string): Promise<any[]> => {
-
     try {
-      
-      const response = await axios.get(`${API_URL}/destinatarios`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        }
-      );
-      return response.data
-    } 
-    
-    catch (error) {
-      if (axios.isAxiosError(error)) {
-        const errorMessage = error.response?.data?.message || 'Error al obtener los destinatarios';
-        throw new Error(errorMessage);
+      const response = await bancoApi.get('/destinatarios');
+      return response.data;
+    } catch (error: any) {
+      if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
       }
       throw new Error('Error de conexión al obtener destinatarios');
     }
   },
 
-  /**-------------------------------------------------------------------------
-   * 
-    Verificar cuenta de destino
-   */
+  // Verificar cuenta de destino
   verificarCuentaDestino: async (accountNumber: string, token: string): Promise<{ exists: boolean; name?: string; bank?: string }> => {
     try {
-      const response = await axios.post(
-        `${API_URL}/cuentas/verificar`,
-        { accountNumber },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          }
-        }
-      );
-
+      const response = await bancoApi.post('/cuentas/verificar', { accountNumber });
       return response.data;
     } catch (error: any) {
-      if (axios.isAxiosError(error)) {
-        // Si la cuenta no existe, el backend podría retornar 404
-        if (error.response?.status === 404) {
-          return { exists: false };
-        }
-        const errorMessage = error.response?.data?.message || 'Error al verificar la cuenta';
-        throw new Error(errorMessage);
+      if (error.response?.status === 404) {
+        return { exists: false };
+      }
+      if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
       }
       throw new Error('Error de conexión al verificar cuenta');
     }
+  },
+
+  // ========== ACCIONES PARA TARJETAS ==========
+
+  // Obtener todas las tarjetas del usuario
+  obtenerTarjetasUsuario: async (token: string): Promise<Tarjeta[]> => {
+  try {
+    console.log('🔍 [TARJETAS] Iniciando request...');
+    console.log('🌐 [TARJETAS] URL base:', bancoApi.defaults.baseURL);
+    console.log('🔑 [TARJETAS] Token presente:', !!token);
+    
+    const response = await bancoApi.get<any>('/tarjetas');
+    
+    console.log('✅ [TARJETAS] Response exitosa:', {
+      status: response.status,
+      data: response.data
+    });
+    
+    if (response.data.success && Array.isArray(response.data.data)) {
+      console.log('📊 [TARJETAS] Tarjetas obtenidas:', response.data.data.length);
+      return response.data.data;
+    } else if (Array.isArray(response.data)) {
+      console.log('📊 [TARJETAS] Tarjetas obtenidas (array directo):', response.data.length);
+      return response.data;
+    } else {
+      console.log('❌ [TARJETAS] Formato inesperado:', response.data);
+      throw new Error('Formato de respuesta inválido para tarjetas');
+    }
+  } catch (error: any) {
+    console.log('❌ [TARJETAS] Error completo:', {
+      message: error.message,
+      code: error.code,
+      response: error.response?.data,
+      status: error.response?.status,
+      url: error.config?.url,
+      baseURL: error.config?.baseURL
+    });
+    
+    if (error.response?.data?.message) {
+      throw new Error(error.response.data.message);
+    }
+    throw new Error('Error de conexión al obtener tarjetas: ' + error.message);
   }
-}
+},
+
+  // Obtener una tarjeta específica
+  obtenerTarjeta: async (id: number, token: string): Promise<Tarjeta> => {
+    try {
+      const response = await bancoApi.get<any>(`/tarjetas/${id}`);
+      
+      if (response.data.success && response.data.data) {
+        return response.data.data;
+      } else if (response.data) {
+        return response.data;
+      } else {
+        throw new Error('Formato de respuesta inválido para tarjeta');
+      }
+    } catch (error: any) {
+      console.log('❌ Error obteniendo tarjeta:', error);
+      
+      if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      }
+      throw new Error('Error de conexión al obtener la tarjeta');
+    }
+  },
+
+  // Crear nueva tarjeta
+  crearTarjeta: async (data: {
+    numero_tarjeta: string;
+    fecha_vencimiento: string;
+    cvv: string;
+    nombre_titular: string;
+  }, token: string): Promise<Tarjeta> => {
+    try {
+      const response = await bancoApi.post<any>('/tarjetas', data);
+      
+      if (response.data.success && response.data.data) {
+        return response.data.data;
+      } else if (response.data) {
+        return response.data;
+      } else {
+        throw new Error('Formato de respuesta inválido al crear tarjeta');
+      }
+    } catch (error: any) {
+      console.log('❌ Error creando tarjeta:', error);
+      
+      if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      }
+      throw new Error('Error de conexión al crear tarjeta');
+    }
+  }
+};
