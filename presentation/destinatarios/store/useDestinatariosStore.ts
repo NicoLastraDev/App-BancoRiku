@@ -1,5 +1,6 @@
 import { CreateDestinatarioData, Destinatario } from "@/core/auth/interfaces/destinatarios";
 import { destinatarioActions } from "@/core/banco/destinatarioActions"; // ← Import CORREGIDO
+import { useNotificationStore } from "@/presentation/notificaciones/store/useNotificationStore";
 import { create } from "zustand";
 
 interface DestinatariosState {
@@ -23,19 +24,36 @@ export const useDestinatariosStore = create<DestinatariosState & DestinatariosAc
   error: null,
 
   // Acciones
-  crearDestinatario: async (data) => { // ← Quitar token parameter
-    set({ loading: true, error: null });
-    try {
-      const nuevoDestinatario = await destinatarioActions.crearDestinatario(data);
-      set(state => ({
-        destinatarios: [...state.destinatarios, nuevoDestinatario],
-        loading: false
-      }));
-    } catch (error: any) {
-      set({ error: error.message, loading: false });
-      throw error;
-    }
-  },
+crearDestinatario: async (data) => {
+  set({ loading: true, error: null });
+  try {
+    const nuevoDestinatario = await destinatarioActions.crearDestinatario(data);
+    set(state => ({
+      destinatarios: [...state.destinatarios, nuevoDestinatario],
+      loading: false
+    }));
+
+    // ✅ NOTIFICACIÓN DE DESTINATARIO CREADO
+    useNotificationStore.getState().addNotification({
+      type: 'success',
+      title: 'Destinatario agregado',
+      message: `Agregaste a ${data.nombre} como destinatario`,
+      action: { type: 'destinatario' }
+    });
+    
+  } catch (error: any) {
+    set({ error: error.message, loading: false });
+    
+    // ✅ NOTIFICACIÓN DE ERROR
+    useNotificationStore.getState().addNotification({
+      type: 'error',
+      title: 'Error al agregar destinatario',
+      message: error.message
+    });
+    
+    throw error;
+  }
+},
 
   obtenerDestinatarios: async () => { // ← Quitar token parameter
     set({ loading: true });

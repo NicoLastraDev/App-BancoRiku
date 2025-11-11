@@ -1,5 +1,6 @@
 import { CreateTransferenciaData, Cuenta, Transferencia } from "@/core/banco/interfaces/transferencias";
 import { Tarjeta, transferenciaActions } from "@/core/banco/transferencias.actions"; // Importar Tarjeta desde las actions
+import { useNotificationStore } from "@/presentation/notificaciones/store/useNotificationStore";
 import { create } from "zustand";
 
 interface TransferenciaState {
@@ -84,37 +85,55 @@ export const useTransferenciaStore = create<TransferenciaState & TransferenciaAc
   },
 
   // Realizar transferencia
-  realizarTransferencia: async (data: CreateTransferenciaData, token: string): Promise<boolean> => {
-    set({ loading: true, error: null, success: false });
-    
-    try {
-      // Validar antes de ejecutar
-      const validation = get().validarTransferencia(data.fromAccountId, data.amount, data.toAccountNumber);
-      if (!validation.isValid) {
-        throw new Error(validation.errors.join(', '));
-      }
-
-      const transferencia = await transferenciaActions.realizarTransferencia(data, token);
-      
-      // Actualizar saldo localmente
-      set(state => ({
-        cuentas: state.cuentas.map(cuenta =>
-          cuenta.id === data.fromAccountId
-            ? { ...cuenta, saldo: cuenta.saldo - data.amount }
-            : cuenta
-        ),
-        transferencias: [transferencia, ...state.transferencias],
-        loading: false,
-        success: true,
-        infoCuentaDestino: null
-      }));
-
-      return true;
-    } catch (error: any) {
-      set({ error: error.message, loading: false });
-      return false;
+ realizarTransferencia: async (data: CreateTransferenciaData, token: string): Promise<boolean> => {
+  set({ loading: true, error: null, success: false });
+  
+  try {
+    const validation = get().validarTransferencia(data.fromAccountId, data.amount, data.toAccountNumber);
+    if (!validation.isValid) {
+      throw new Error(validation.errors.join(', '));
     }
-  },
+
+    const transferencia = await transferenciaActions.realizarTransferencia(data, token);
+    
+    // Actualizar estado
+    set(state => ({
+      cuentas: state.cuentas.map(cuenta =>
+        cuenta.id === data.fromAccountId
+          ? { ...cuenta, saldo: cuenta.saldo - data.amount }
+          : cuenta
+      ),
+      transferencias: [transferencia, ...state.transferencias],
+      loading: false,
+      success: true,
+      infoCuentaDestino: null
+    }));
+
+    // ✅ NOTIFICACIÓN DE TRANSFERENCIA EXITOSA
+    useNotificationStore.getState().addNotification({
+      type: 'success',
+      title: 'Transferencia realizada',
+      message: `Enviaste $${data.amount} a cuenta ${data.toAccountNumber}`,
+      action: { 
+        type: 'transferencia',
+        data: transferencia 
+      }
+    });
+
+    return true;
+  } catch (error: any) {
+    set({ error: error.message, loading: false });
+    
+    // ✅ NOTIFICACIÓN DE ERROR EN TRANSFERENCIA
+    useNotificationStore.getState().addNotification({
+      type: 'error',
+      title: 'Error en transferencia',
+      message: error.message
+    });
+    
+    return false;
+  }
+},
 
   // Verificar cuenta destino
   verificarCuentaDestino: async (accountNumber: string, token: string) => {

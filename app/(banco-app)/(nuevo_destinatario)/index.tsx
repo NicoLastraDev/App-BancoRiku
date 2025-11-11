@@ -1,10 +1,16 @@
-import GoBackIconButton from '@/components/GoBackIconButton'
 import { useAuthStore } from '@/presentation/auth/store/useAuthStore'
 import { useDestinatariosStore } from '@/presentation/destinatarios/store/useDestinatariosStore'
+import { Ionicons } from '@expo/vector-icons'
 import React, { useState } from 'react'
-import { ActivityIndicator, Alert, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, Alert, Modal, Text, TextInput, TouchableOpacity, View } from 'react-native'
 
-const NuevoDestinatarioScreen = () => {
+interface NuevoDestinatarioModalProps {
+  visible: boolean
+  onClose: () => void
+  onDestinatarioAgregado: () => void
+}
+
+const NuevoDestinatarioModal = ({ visible, onClose, onDestinatarioAgregado }: NuevoDestinatarioModalProps) => {
   const [numeroCuenta, setNumeroCuenta] = useState('')
   const [cuentaEncontrada, setCuentaEncontrada] = useState<any>(null)
   const [buscando, setBuscando] = useState(false)
@@ -42,18 +48,15 @@ const NuevoDestinatarioScreen = () => {
 
       console.log('📡 Response status:', response.status)
       
-      // Obtener el texto completo de la respuesta
       const responseText = await response.text()
       console.log('📄 Response completo:', responseText)
 
-      // Verificar si es HTML (error del servidor)
       if (responseText.includes('<!DOCTYPE') || responseText.includes('<html') || responseText.trim().startsWith('<')) {
         console.log('❌ El servidor devolvió HTML en lugar de JSON')
         Alert.alert('Error del Servidor', 'El endpoint /api/beneficiarios/search no está funcionando. Verifica el backend.')
         return
       }
 
-      // Intentar parsear como JSON
       let data
       try {
         data = JSON.parse(responseText)
@@ -101,97 +104,122 @@ const NuevoDestinatarioScreen = () => {
       
       Alert.alert('Éxito', 'Destinatario agregado correctamente')
       
-      // Limpiar formulario
+      // Limpiar y cerrar
       setNumeroCuenta('')
       setCuentaEncontrada(null)
+      onDestinatarioAgregado()
+      onClose()
       
     } catch (error: any) {
       Alert.alert('Error', error.message || 'No se pudo agregar el destinatario')
     }
   }
 
-  return (
-    <View className="flex-1 p-4 bg-gray-50 mt-10">
-      <GoBackIconButton/>
-      <Text className="text-xl font-bold text-gray-800 mb-6 text-center">Agregar Nuevo Destinatario</Text>
-      
-      {/* Campo de búsqueda */}
-      <View className="mb-6">
-        <Text className="text-gray-700 mb-2">Número de Cuenta</Text>
-        <View className="flex-row">
-          <TextInput
-            className="flex-1 border border-gray-300 rounded-l-lg p-3 bg-white"
-            placeholder="Ej: 6185-2835-4550-1725"
-            value={numeroCuenta}
-            onChangeText={setNumeroCuenta}
-            keyboardType="number-pad"
-            editable={!buscando && !loading}
-          />
-          <TouchableOpacity
-            className="bg-blue-500 px-6 rounded-r-lg items-center justify-center"
-            onPress={buscarCuenta}
-            disabled={buscando || loading}
-          >
-            {buscando ? (
-              <ActivityIndicator size="small" color="white" />
-            ) : (
-              <Text className="text-white font-bold">Buscar</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-      </View>
+  const handleClose = () => {
+    setNumeroCuenta('')
+    setCuentaEncontrada(null)
+    setBuscando(false)
+    onClose()
+  }
 
-      {/* Resultados de la búsqueda */}
-      {cuentaEncontrada && (
-        <View className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-6">
-          <Text className="text-lg font-semibold text-gray-800 mb-3">Información de la Cuenta</Text>
-          
-          <View className="space-y-3">
-            <View className="flex-row justify-between">
-              <Text className="text-gray-600">Nombre:</Text>
-              <Text className="text-gray-800 font-medium">{cuentaEncontrada.nombre}</Text>
-            </View>
-            
-            <View className="flex-row justify-between">
-              <Text className="text-gray-600">Tipo de Cuenta:</Text>
-              <Text className="text-gray-800 font-medium">{cuentaEncontrada.tipoCuenta}</Text>
-            </View>
-            
-            <View className="flex-row justify-between">
-              <Text className="text-gray-600">Banco:</Text>
-              <Text className="text-gray-800 font-medium">{cuentaEncontrada.banco}</Text>
-            </View>
-            
-            <View className="flex-row justify-between">
-              <Text className="text-gray-600">Número de Cuenta:</Text>
-              <Text className="text-gray-800 font-medium">{cuentaEncontrada.numeroCuenta}</Text>
+  return (
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={handleClose}
+    >
+      <View className="flex-1 bg-white pt-10">
+        {/* Header */}
+        <View className="flex-row items-center justify-between px-4 pb-4 border-b border-gray-200">
+          <TouchableOpacity onPress={handleClose} className="p-2">
+            <Ionicons name="close" size={24} color="#374151" />
+          </TouchableOpacity>
+          <Text className="text-lg font-bold text-gray-800">Agregar Destinatario</Text>
+          <View style={{ width: 24 }} /> {/* Espacio para centrar el título */}
+        </View>
+
+        {/* Contenido */}
+        <View className="flex-1 p-4">
+          {/* Campo de búsqueda */}
+          <View className="mb-6">
+            <Text className="text-gray-700 mb-2 font-medium">Número de Cuenta</Text>
+            <View className="flex-row">
+              <TextInput
+                className="flex-1 border border-gray-300 rounded-l-lg p-4 bg-white text-base"
+                placeholder="Ej: 6185-2835-4550-1725"
+                value={numeroCuenta}
+                onChangeText={setNumeroCuenta}
+                keyboardType="number-pad"
+                editable={!buscando && !loading}
+              />
+              <TouchableOpacity
+                className="bg-blue-500 px-5 rounded-r-lg items-center justify-center"
+                onPress={buscarCuenta}
+                disabled={buscando || loading}
+              >
+                {buscando ? (
+                  <ActivityIndicator size="small" color="white" />
+                ) : (
+                  <Text className="text-white font-bold">Buscar</Text>
+                )}
+              </TouchableOpacity>
             </View>
           </View>
-          
-          <TouchableOpacity
-            className="mt-4 bg-green-500 py-3 rounded-lg items-center"
-            onPress={agregarDestinatario}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator size="small" color="white" />
-            ) : (
-              <Text className="text-white font-medium text-lg">Agregar Destinatario</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-      )}
 
-      {/* Mensaje de instrucciones */}
-      {!cuentaEncontrada && !buscando && (
-        <View className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-          <Text className="text-blue-800 text-center">
-            Ingresa el número de cuenta del destinatario y presiona "Buscar"
-          </Text>
+          {/* Resultados de la búsqueda */}
+          {cuentaEncontrada && (
+            <View className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
+              <Text className="text-lg font-semibold text-gray-800 mb-3">Información de la Cuenta</Text>
+              
+              <View className="space-y-3">
+                <View>
+                  <Text className="text-gray-600 text-sm">Nombre</Text>
+                  <Text className="text-gray-800 font-medium text-base">{cuentaEncontrada.nombre}</Text>
+                </View>
+                
+                <View>
+                  <Text className="text-gray-600 text-sm">Tipo de Cuenta</Text>
+                  <Text className="text-gray-800 font-medium text-base">{cuentaEncontrada.tipoCuenta}</Text>
+                </View>
+                
+                <View>
+                  <Text className="text-gray-600 text-sm">Banco</Text>
+                  <Text className="text-gray-800 font-medium text-base">{cuentaEncontrada.banco}</Text>
+                </View>
+                
+                <View>
+                  <Text className="text-gray-600 text-sm">Número de Cuenta</Text>
+                  <Text className="text-gray-800 font-medium text-base">{cuentaEncontrada.numeroCuenta}</Text>
+                </View>
+              </View>
+              
+              <TouchableOpacity
+                className="mt-4 bg-green-500 py-4 rounded-lg items-center"
+                onPress={agregarDestinatario}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator size="small" color="white" />
+                ) : (
+                  <Text className="text-white font-medium text-lg">Agregar Destinatario</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Mensaje de instrucciones */}
+          {!cuentaEncontrada && !buscando && (
+            <View className="bg-blue-50 p-4 rounded-lg border border-blue-200 mt-4">
+              <Text className="text-blue-800 text-center text-sm">
+                Ingresa el número de cuenta del destinatario y presiona "Buscar"
+              </Text>
+            </View>
+          )}
         </View>
-      )}
-    </View>
+      </View>
+    </Modal>
   )
 }
 
-export default NuevoDestinatarioScreen
+export default NuevoDestinatarioModal

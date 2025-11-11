@@ -2,7 +2,7 @@ import GoBackIconButton from '@/components/GoBackIconButton';
 import { useAuthStore } from '@/presentation/auth/store/useAuthStore';
 import { useTransferenciaStore } from '@/presentation/transferencias/store/useTransferenciasStore';
 import React, { useEffect } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Text, View } from 'react-native';
 
 const TarjetaDebitoPremium = () => {
   const { user, token } = useAuthStore();
@@ -16,21 +16,21 @@ const TarjetaDebitoPremium = () => {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View className="flex-1 bg-white justify-center items-center">
         <GoBackIconButton />
-        <ActivityIndicator size="large" color="#ec4899" />
-        <Text style={styles.loadingText}>Cargando información kawaii... ✨</Text>
+        <ActivityIndicator size="large" color="#1e40af" />
+        <Text className="text-gray-600 mt-4 text-lg">Cargando información de la tarjeta...</Text>
       </View>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.errorContainer}>
+      <View className="flex-1 bg-white justify-center items-center p-6">
         <GoBackIconButton />
-        <Text style={styles.errorTitle}>Error: {error}</Text>
-        <Text style={styles.errorMessage}>
-          No se pudo cargar la información de tu tarjeta kawaii 🥺
+        <Text className="text-red-500 text-center text-lg mb-4">Error: {error}</Text>
+        <Text className="text-gray-600 text-center mb-4">
+          No se pudo cargar la información de tu tarjeta
         </Text>
       </View>
     );
@@ -38,12 +38,14 @@ const TarjetaDebitoPremium = () => {
 
   if (!tarjetas || tarjetas.length === 0) {
     return (
-      <View style={styles.noCardsContainer}>
+      <View className="flex-1 bg-white justify-center items-center p-6">
         <GoBackIconButton />
-        <Text style={styles.emoji}>💳🌸</Text>
-        <Text style={styles.noCardsTitle}>No tienes tarjetas kawaii</Text>
-        <Text style={styles.noCardsMessage}>
-          Contacta con el banco para solicitar tu tarjeta débito ✨
+        <Text className="text-gray-400 text-6xl mb-4">💳</Text>
+        <Text className="text-gray-600 text-xl font-medium mb-2 text-center">
+          No tienes tarjetas
+        </Text>
+        <Text className="text-gray-500 text-center text-base">
+          Contacta con el banco para solicitar tu tarjeta débito
         </Text>
       </View>
     );
@@ -52,51 +54,47 @@ const TarjetaDebitoPremium = () => {
   const tarjeta = tarjetas[0];
 
   return (
-    <View style={styles.container}>
-      <GoBackIconButton />
+    <View className="flex-1 bg-gray-50">
+      {/* Header con botón de regreso */}
+      <View className="pt-12 pl-4 bg-gray-50">
+        <GoBackIconButton />
+      </View>
       
-      <View style={styles.content}>
-        {/* Tarjeta principal kawaii */}
-        <View style={styles.card}>
-          {/* Efectos kawaii */}
-          <View style={styles.effectTop} />
-          <View style={styles.effectBottom} />
+      {/* Contenido principal */}
+      <View className="flex-1 justify-center items-center px-4">
+        {/* Tarjeta principal */}
+        <View className="w-full max-w-96 h-72 bg-blue-900 rounded-2xl p-6 overflow-hidden shadow-xl relative">
           
-          {/* Decoraciones kawaii */}
-          <Text style={styles.deco1}>🌸</Text>
-          <Text style={styles.deco2}>✨</Text>
-          <Text style={styles.deco3}>⭐</Text>
-
-          {/* Chip kawaii */}
-          <View style={styles.chip}>
-            <View style={styles.chipInner}>
-              <View style={styles.chipLeft}>
-                <View style={styles.chipLine} />
-                <View style={styles.chipLine} />
+          {/* Chip */}
+          <View className="absolute top-6 left-6 w-12 h-10 bg-amber-300 rounded-md justify-center items-center">
+            <View className="w-10 h-6 bg-amber-400 rounded-sm flex-row">
+              <View className="flex-1 border-r border-amber-500">
+                <View className="h-1 bg-amber-600 mx-1 my-1 rounded" />
+                <View className="h-1 bg-amber-600 mx-1 my-1 rounded" />
               </View>
-              <View style={styles.chipRight}>
-                <View style={styles.chipLine} />
-                <View style={styles.chipLine} />
+              <View className="flex-1">
+                <View className="h-1 bg-amber-600 mx-1 my-1 rounded" />
+                <View className="h-1 bg-amber-600 mx-1 my-1 rounded" />
               </View>
             </View>
           </View>
 
-          {/* Logo MasterCard kawaii */}
-          <View style={styles.logoContainer}>
-            <View style={styles.logoRed} />
-            <View style={styles.logoYellow} />
+          {/* Logo MasterCard */}
+          <View className="absolute top-6 right-6 flex-row items-center">
+            <View className="w-8 h-8 bg-red-500 rounded-full -mr-2 z-10" />
+            <View className="w-8 h-8 bg-yellow-500 rounded-full opacity-90" />
           </View>
 
-          {/* Contenido */}
-          <View style={styles.cardContent}>
+          {/* Contenido de la tarjeta */}
+          <View className="flex-1 justify-between pt-16">
             {/* Header */}
-            <View style={styles.cardHeader}>
-              <Text style={styles.mastercardText}>MASTERCARD</Text>
-              <Text style={styles.debitoBadge}>DÉBITO</Text>
+            <View className="flex-row justify-between items-start">
+              <Text className="text-white font-bold text-lg">MASTERCARD</Text>
+              <Text className="text-white text-xs font-bold bg-blue-700 px-3 py-1 rounded-full">DÉBITO</Text>
             </View>
 
-            {/* Número de tarjeta formateado */}
-            <Text style={styles.cardNumber}>
+            {/* Número de tarjeta */}
+            <Text className="text-white text-2xl font-bold tracking-widest text-center mt-8 font-mono">
               {tarjeta.numero_tarjeta ? 
                 tarjeta.numero_tarjeta.replace(/(\d{4})/g, '$1 ').trim() : 
                 '**** **** **** ****'
@@ -104,24 +102,24 @@ const TarjetaDebitoPremium = () => {
             </Text>
 
             {/* Información del titular, CVV y vencimiento */}
-            <View style={styles.cardFooter}>
-              <View style={styles.infoContainer}>
-                <Text style={styles.label}>TITULAR</Text>
-                <Text style={styles.holderName}>
+            <View className="flex-row justify-between items-end mt-8">
+              <View className="flex-1">
+                <Text className="text-blue-200 text-xs mb-1">TITULAR</Text>
+                <Text className="text-white text-sm font-semibold" numberOfLines={1}>
                   {tarjeta.nombre_titular?.toUpperCase() || 'TITULAR'}
                 </Text>
               </View>
 
-              <View style={styles.infoContainer}>
-                <Text style={styles.label}>CVV</Text>
-                <Text style={styles.cvvValue}>
+              <View className="items-center mx-4">
+                <Text className="text-blue-200 text-xs mb-1">CVV</Text>
+                <Text className="text-white text-sm font-semibold font-mono">
                   {tarjeta.cvv || '***'}
                 </Text>
               </View>
               
-              <View style={styles.infoContainer}>
-                <Text style={styles.label}>VENCE</Text>
-                <Text style={styles.expiryDate}>
+              <View className="items-end">
+                <Text className="text-blue-200 text-xs mb-1">VENCE</Text>
+                <Text className="text-white text-sm font-semibold">
                   {tarjeta.fecha_vencimiento ? 
                     `${tarjeta.fecha_vencimiento.split('/')[0]}/${tarjeta.fecha_vencimiento.split('/')[1]?.slice(-2)}` : 
                     'MM/AA'
@@ -129,289 +127,28 @@ const TarjetaDebitoPremium = () => {
                 </Text>
               </View>
             </View>
+
+            {/* Saldo disponible */}
+            <View className="mt-4 pt-3 border-t border-blue-700">
+              <View className="flex-row justify-between items-center">
+                <Text className="text-blue-200 text-xs">SALDO DISPONIBLE</Text>
+                <Text className="text-green-300 text-lg font-bold">
+                  ${tarjeta.saldo_actual ? tarjeta.saldo_actual.toLocaleString() : '0'}
+                </Text>
+              </View>
+            </View>
           </View>
         </View>
 
-        {/* Nota de seguridad kawaii */}
-        <View style={styles.securityNote}>
-          <Text style={styles.shield}>🛡️</Text>
-          <Text style={styles.securityText}>
-            Mantén tu CVV en secreto. No lo compartas con nadie 🌸
+        {/* Nota de seguridad */}
+        <View className="bg-white rounded-xl p-4 mt-8 shadow-sm border border-gray-200 w-full">
+          <Text className="text-gray-600 text-sm text-center">
+            Mantén tu CVV en secreto. No lo compartas con nadie.
           </Text>
         </View>
       </View>
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-  },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 16,
-    marginTop: 60, // Espacio para el botón de regreso
-  },
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 16,
-  },
-  loadingText: {
-    color: '#374151',
-    fontSize: 18,
-    marginTop: 16,
-  },
-  errorContainer: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  errorTitle: {
-    color: '#ef4444',
-    fontSize: 18,
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  errorMessage: {
-    color: '#374151',
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  noCardsContainer: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  emoji: {
-    fontSize: 48,
-    marginBottom: 16,
-  },
-  noCardsTitle: {
-    color: '#374151',
-    fontSize: 20,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  noCardsMessage: {
-    color: '#6b7280',
-    textAlign: 'center',
-    fontSize: 16,
-  },
-  card: {
-    width: 384,
-    height: 288,
-    backgroundColor: '#ffffff',
-    borderRadius: 24,
-    padding: 24,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
-    borderWidth: 4,
-    borderColor: '#fbcfe8',
-  },
-  effectTop: {
-    position: 'absolute',
-    top: -64,
-    left: -64,
-    width: 160,
-    height: 160,
-    backgroundColor: '#fce7f3',
-    borderRadius: 80,
-  },
-  effectBottom: {
-    position: 'absolute',
-    bottom: -80,
-    right: -80,
-    width: 160,
-    height: 160,
-    backgroundColor: '#f3e8ff',
-    borderRadius: 80,
-  },
-  deco1: {
-    position: 'absolute',
-    top: 16,
-    right: 24,
-    fontSize: 24,
-    color: '#f472b6',
-  },
-  deco2: {
-    position: 'absolute',
-    bottom: 24,
-    left: 24,
-    fontSize: 20,
-    color: '#c084fc',
-  },
-  deco3: {
-    position: 'absolute',
-    top: 48,
-    right: 64,
-    fontSize: 18,
-    color: '#fbbf24',
-  },
-  chip: {
-    position: 'absolute',
-    top: 24,
-    left: 24,
-    width: 48,
-    height: 40,
-    backgroundColor: '#fbbf24',
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#f59e0b',
-  },
-  chipInner: {
-    width: 40,
-    height: 24,
-    backgroundColor: '#fde68a',
-    borderRadius: 8,
-    flexDirection: 'row',
-  },
-  chipLeft: {
-    flex: 1,
-    borderRightWidth: 2,
-    borderRightColor: '#f59e0b',
-    padding: 2,
-  },
-  chipRight: {
-    flex: 1,
-    padding: 2,
-  },
-  chipLine: {
-    height: 2,
-    backgroundColor: '#d97706',
-    borderRadius: 1,
-    marginVertical: 1,
-  },
-  logoContainer: {
-    position: 'absolute',
-    top: 24,
-    right: 24,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  logoRed: {
-    width: 32,
-    height: 32,
-    backgroundColor: '#f87171',
-    borderRadius: 16,
-    marginRight: -8,
-    zIndex: 10,
-    borderWidth: 2,
-    borderColor: '#ffffff',
-  },
-  logoYellow: {
-    width: 32,
-    height: 32,
-    backgroundColor: '#fbbf24',
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: '#ffffff',
-  },
-  cardContent: {
-    flex: 1,
-    justifyContent: 'space-between',
-    paddingTop: 16,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  mastercardText: {
-    color: '#1f2937',
-    fontSize: 18,
-    fontWeight: 'bold',
-    letterSpacing: 1,
-  },
-  debitoBadge: {
-    color: '#374151',
-    fontSize: 12,
-    fontWeight: 'bold',
-    backgroundColor: '#fbcfe8',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 16,
-  },
-  cardNumber: {
-    color: '#1f2937',
-    fontSize: 20,
-    fontWeight: 'bold',
-    letterSpacing: 2,
-    textAlign: 'center',
-    marginTop: 20,
-    fontFamily: 'monospace',
-  },
-  cardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    marginTop: 16,
-  },
-  infoContainer: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  label: {
-    color: '#6b7280',
-    fontSize: 12,
-    marginBottom: 4,
-  },
-  holderName: {
-    color: '#1f2937',
-    fontSize: 14,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  cvvValue: {
-    color: '#1f2937',
-    fontSize: 14,
-    fontWeight: '600',
-    fontFamily: 'monospace',
-  },
-  expiryDate: {
-    color: '#1f2937',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  securityNote: {
-    backgroundColor: '#f9fafb',
-    borderRadius: 16,
-    padding: 16,
-    marginTop: 32,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#fbcfe8',
-    width: '100%',
-  },
-  shield: {
-    fontSize: 20,
-    marginRight: 8,
-    color: '#f472b6',
-  },
-  securityText: {
-    color: '#374151',
-    fontSize: 14,
-    textAlign: 'center',
-    flex: 1,
-  },
-});
 
 export default TarjetaDebitoPremium;

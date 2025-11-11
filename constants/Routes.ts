@@ -32,6 +32,11 @@ export const menuRoutes: MenuRoute[] = [
   {
     title: '',
     name: 'datos/index'
+  },
+
+  {
+    title: '',
+    name: 'notificaciones/index'
   }
 ]
 
