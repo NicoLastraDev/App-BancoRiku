@@ -18,30 +18,66 @@ export interface Tarjeta {
 export const transferenciaActions = {
 
   // Crear transferencia
-   realizarTransferencia: async(data: CreateTransferenciaData, token: string): Promise<Transferencia> => {
+  realizarTransferencia: async(data: CreateTransferenciaData, token: string): Promise<Transferencia> => {
     try {
-      const response = await bancoApi.post<Transferencia>('/transferencias', data);
+      console.log('🚀 Iniciando transferencia...');
       
-      // ✅ NOTIFICACIÓN DE ÉXITO
-      useNotificationStore.getState().addNotification({
-        type: 'success',
-        title: 'Transferencia exitosa',
-        message: `Enviaste $${data.monto} a cuenta ${data.cuenta_destino}`,
-        action: { 
-          type: 'transferencia',
-          data: response.data 
-        }
+      const response = await bancoApi.post<any>('/transferencias', data); // Cambiar a any para ver estructura completa
+      
+      console.log('🔍 Respuesta completa del backend:', {
+        status: response.status,
+        data: response.data
       });
       
-      return response.data;
+      // Verificar si la transferencia fue exitosa
+      if (response.data.success) {
+        console.log('✅ Transferencia exitosa');
+        
+        // ✅ NOTIFICACIÓN DE ÉXITO
+        useNotificationStore.getState().addNotification({
+          type: 'success',
+          title: 'Transferencia exitosa',
+          message: `Enviaste $${data.monto} a cuenta ${data.cuenta_destino}`,
+          action: { 
+            type: 'transferencia',
+            data: response.data 
+          }
+        });
+        
+        return response.data;
+      } else {
+        // ❌ El backend retornó success: false
+        console.log('❌ Backend reportó error:', response.data.message);
+        
+        // Crear un error específico
+        const error = new Error(response.data.message);
+        (error as any).response = { data: response.data };
+        throw error;
+      }
+      
     } catch (error: any) {
-      // ✅ NOTIFICACIÓN DE ERROR
+      console.log('❌ Error en transferencia:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      
+      const errorData = error.response?.data;
+      const errorMessage = errorData?.message || 'No se pudo completar la transferencia';
+      
+      // ✅ NOTIFICACIÓN DE ERROR ESPECÍFICA
       useNotificationStore.getState().addNotification({
         type: 'error',
         title: 'Error en transferencia',
-        message: error.response?.data?.message || 'No se pudo completar la transferencia'
+        message: errorMessage
       });
-      throw error;
+      
+      // Propagar el error con más información
+      const enhancedError = new Error(errorMessage);
+      (enhancedError as any).originalError = error;
+      (enhancedError as any).isInsufficientFunds = errorMessage.includes('Saldo insuficiente');
+      
+      throw enhancedError;
     }
   },
 

@@ -14,10 +14,9 @@ export interface Transferencia {
 }
 
 export interface CreateTransferenciaData {
-  fromAccountId: number;
-  toAccountNumber: string;
-  amount: number;
-  description?: string;
+  cuenta_destino: number;
+  monto: number;
+  descripcion?: string;
 }
 
 export interface Cuenta {

@@ -1,4 +1,3 @@
-// components/Notifications/NotificationItem.tsx
 import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 
@@ -12,11 +11,11 @@ import {
 } from 'lucide-react-native';
 
 interface NotificationItemProps {
-  notification: AppNotification; // ← Cambiado a AppNotification
+  notification: AppNotification;
 }
 
 export const NotificationItem: React.FC<NotificationItemProps> = ({ notification }) => {
-  const { markAsRead, deleteNotification } = useNotificationStore();
+  const { marcarComoLeidaBackend, deleteNotification } = useNotificationStore(); // ← CAMBIAR a marcarComoLeidaBackend
 
   const getIcon = () => {
     switch (notification.type) {
@@ -48,9 +47,20 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ notification
     }
   };
 
-  const handlePress = () => {
-    if (!notification.read) {
-      markAsRead(notification.id);
+  const handlePress = async () => {
+    try {
+      if (!notification.read) {
+        console.log('📌 Marcando notificación como leída:', notification.id);
+        // ✅ USAR la función que actualiza backend y local
+        await marcarComoLeidaBackend(notification.id);
+      }
+      
+      // Aquí puedes agregar navegación si la notificación tiene una acción
+      if (notification.action) {
+        // router.push(notification.action);
+      }
+    } catch (error) {
+      console.error('❌ Error al marcar notificación como leída:', error);
     }
   };
 
@@ -102,13 +112,6 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ notification
           {!notification.read && (
             <View className="w-2 h-2 bg-blue-500 rounded-full" />
           )}
-          
-          {/* <TouchableOpacity 
-            onPress={handleDelete}
-            className="p-1"
-          >
-            <Text className="text-gray-400 text-xs">Eliminar</Text>
-          </TouchableOpacity> */}
         </View>
       </View>
 

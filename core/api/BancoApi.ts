@@ -1,4 +1,5 @@
-import { SecureStorageAdapter } from '@/helpers/adapters/secure-storage-adapter';
+
+import { universalStorage } from '@/helpers/adapters/universalStorageAdapter';
 import axios from 'axios';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
@@ -44,13 +45,25 @@ try {
   });
 }
 
-// Interceptors
+// Interceptors - USAR universalStorage
 bancoApi.interceptors.request.use(async (config) => {
   console.log('🚀 Request a:', config.url);
-  const token = await SecureStorageAdapter.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  
+  try {
+    const token = await universalStorage.getItem('userToken'); // ✅ CLAVE UNIFICADA
+    console.log('🔑 Token de universalStorage:', token ? 'ENCONTRADO' : 'NO ENCONTRADO');
+    
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+      console.log('✅ Header Authorization agregado');
+    } else {
+      console.warn('⚠️ No se encontró token en universalStorage');
+    }
+  } catch (error) {
+    console.error('💥 Error obteniendo token:', error);
   }
+  
+  console.log('🔑 Headers finales:', config.headers);
   return config;
 });
 

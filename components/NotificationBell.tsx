@@ -1,18 +1,32 @@
+import { useNotificationStore } from "@/presentation/notificaciones/store/useNotificationStore";
+import { router } from "expo-router";
+import { Bell } from "lucide-react-native";
+import { useEffect } from "react";
+import { Text, TouchableOpacity, View } from "react-native";
+
 // components/Notifications/NotificationBell.tsx
-
-import { useNotificationStore } from '@/presentation/notificaciones/store/useNotificationStore';
-import { useRouter } from 'expo-router'; // ← Importar useRouter
-import { Bell } from 'lucide-react-native';
-import React from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
-
 export const NotificationBell: React.FC = () => {
-  const { unreadCount } = useNotificationStore();
-  const router = useRouter(); // ← Usar router de Expo
+  const { unreadCount, sincronizarNotificaciones } = useNotificationStore();
   
+  // ✅ DEBUG DETALLADO
+  useEffect(() => {
+    console.log('🔔 [BELL DEBUG] Estado actual:', {
+      unreadCount,
+      timestamp: new Date().toLocaleTimeString(),
+      hasUnread: unreadCount > 0
+    });
+  }, [unreadCount]);
+
+  const handlePress = async () => {
+    console.log('🔔 [BELL] Navegando a notificaciones, unread:', unreadCount);
+    // Sincronizar antes de navegar
+    await sincronizarNotificaciones();
+    router.push('/(banco-app)/(notificaciones)');
+  };
+
   return (
     <TouchableOpacity 
-      onPress={() => router.push('/(banco-app)/Notificaciones')} // ← Navegar a notificaciones
+      onPress={handlePress}
       className="relative p-2"
     >
       <Bell size={24} color="#000" />

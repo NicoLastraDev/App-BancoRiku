@@ -2,9 +2,8 @@ import { authCheckStatus, authLogin, authRegister } from '@/core/auth/actions/au
 import { User } from '@/core/auth/interfaces/user';
 import { cuentaActions } from '@/core/banco/cuentaActions';
 import { Cuenta } from '@/core/banco/interfaces/cuentas';
-
 import { universalStorage } from '@/helpers/adapters/universalStorageAdapter';
-import { Platform } from 'react-native'; // ← AGREGAR IMPORT
+import { Platform } from 'react-native';
 import { create } from 'zustand';
 
 export type authStatus = 'authenticated' | 'unauthenticathed' | 'checking'
@@ -31,79 +30,85 @@ export const useAuthStore = create<authState>()((set, get) => ({
   cuenta: undefined,
 
   changeStatus: async(token?: string, user?: User) => {
-  console.log('🔄 changeStatus llamado - Plataforma:', Platform.OS, { 
-    token: !!token, 
-    user: user,
-    userId: user?.id 
-  });
-  
-  if(!token || !user){
-    console.log('❌ Sin token o usuario, logout');
-    set({ status: 'unauthenticathed', token: undefined, user: undefined, cuenta: undefined })
-    await universalStorage.deleteItem('token') // ← CAMBIADO
-    return false
-  }
+    console.log('🔄 changeStatus llamado - Plataforma:', Platform.OS, { 
+      token: !!token, 
+      user: user,
+      userId: user?.id 
+    });
+    
+    if(!token || !user){
+      console.log('❌ Sin token o usuario, logout');
+      set({ status: 'unauthenticathed', token: undefined, user: undefined, cuenta: undefined })
+      await universalStorage.deleteItem('userToken') // ✅ CAMBIADO
+      return false
+    }
 
-  // ✅ VERIFICAR que user tiene id
-  if (!user.id) {
-    console.log('❌ User sin ID, no se puede autenticar');
-    return false;
-  }
+    // ✅ VERIFICAR que user tiene id
+    if (!user.id) {
+      console.log('❌ User sin ID, no se puede autenticar');
+      return false;
+    }
 
-  console.log('✅ Autenticando usuario ID:', user.id);
-  set({ status: 'authenticated', token: token, user: user })
-  await universalStorage.setItem('token', token) // ← CAMBIADO
-  
-  // Cargar cuenta después de autenticar
-  console.log('🔄 Llamando loadCuenta...');
-  await get().loadCuenta();
-  return true
-},
+    console.log('✅ Autenticando usuario ID:', user.id);
+    set({ status: 'authenticated', token: token, user: user })
+    await universalStorage.setItem('userToken', token) // ✅ CAMBIADO
+    
+    // Cargar cuenta después de autenticar
+    console.log('🔄 Llamando loadCuenta...');
+    await get().loadCuenta();
+    return true
+  },
 
   login: async(email: string, password: string) => {
-  console.log('🔄 Store: login llamado con email:', email, 'Plataforma:', Platform.OS);
-  
-  const resp = await authLogin(email, password)
-  
-  console.log('📦 Store: respuesta de authLogin:', resp);
-  console.log('👤 Store: user object:', resp?.user);
-  console.log('🆔 Store: user ID:', resp?.user?.id);
-  console.log('🔑 Store: token:', resp?.token);
-  
-  console.log('🎯 ANTES de changeStatus - user tiene id?:', !!resp?.user?.id);
-  console.log('🎯 user completo:', resp?.user);
-  
-  return get().changeStatus(resp?.token, resp?.user)
-},
+    console.log('🔄 Store: login llamado con email:', email, 'Plataforma:', Platform.OS);
+    
+    const resp = await authLogin(email, password)
+    
+    console.log('📦 Store: respuesta de authLogin:', resp);
+    console.log('👤 Store: user object:', resp?.user);
+    console.log('🆔 Store: user ID:', resp?.user?.id);
+    console.log('🔑 Store: token:', resp?.token);
+    
+    console.log('🎯 ANTES de changeStatus - user tiene id?:', !!resp?.user?.id);
+    console.log('🎯 user completo:', resp?.user);
+    
+    return get().changeStatus(resp?.token, resp?.user)
+  },
 
   checkStatus: async() => {
-    console.log('🔍 checkStatus - Plataforma:', Platform.OS);
-    try {
-      const storedToken = await universalStorage.getItem('token'); // ← CAMBIADO
-      console.log('🔍 Token en storage:', storedToken ? 'SÍ' : 'NO');
+  console.log('🔍 checkStatus - INICIANDO');
+  try {
+    const storedToken = await universalStorage.getItem('userToken');
+    console.log('🔍 Token en storage:', storedToken);
+    
+    if (storedToken) {
+      console.log('🔍 Llamando authCheckStatus...');
+      const resp = await authCheckStatus()
+      console.log('🔍 Respuesta de authCheckStatus:', resp);
       
-      if (storedToken) {
-        const resp = await authCheckStatus()
-        if (resp?.token && resp?.user) {
-          await get().changeStatus(resp.token, resp.user)
-        } else {
-          // Token inválido, hacer logout
-          console.log('❌ Token inválido, haciendo logout');
-          await get().logout()
-        }
+      if (resp?.token && resp?.user) {
+        console.log('✅ Token válido, llamando changeStatus');
+        await get().changeStatus(resp.token, resp.user)
+        console.log('✅ changeStatus completado');
       } else {
-        console.log('🔍 No hay token guardado');
-        set({ status: 'unauthenticathed', token: undefined, user: undefined })
+        console.log('❌ Token inválido o respuesta incompleta');
+        await get().logout()
       }
-    } catch (error) {
-      console.log('❌ Error en checkStatus:', error);
+    } else {
+      console.log('🔍 No hay token guardado');
       set({ status: 'unauthenticathed', token: undefined, user: undefined })
     }
-  },
+  } catch (error) {
+    console.log('❌ Error en checkStatus:', error);
+    set({ status: 'unauthenticathed', token: undefined, user: undefined })
+  } finally {
+    console.log('🔍 checkStatus - FINALIZADO');
+  }
+},
 
   logout: async() => {
     console.log('🚪 logout - Plataforma:', Platform.OS);
-    await universalStorage.deleteItem('token') // ← CAMBIADO
+    await universalStorage.deleteItem('userToken') // ✅ CAMBIADO
     set({
       status: "unauthenticathed", 
       token: undefined, 
@@ -130,23 +135,22 @@ export const useAuthStore = create<authState>()((set, get) => ({
   },
 
   loadCuenta: async () => {
-  try {
-    console.log('🔄 Store: loadCuenta llamado - Plataforma:', Platform.OS);
-    
-    const resp = await cuentaActions.obtenerCuenta();
-    
-    console.log('📦 Store: respuesta de obtenerCuenta:', resp);
-    
-    if (resp) {
-      console.log('✅ Cuenta obtenida exitosamente:', resp.numero_cuenta);
-      set({ cuenta: resp });
-    } else {
-      console.log('❌ loadCuenta: No se pudieron obtener los datos de la cuenta');
+    try {
+      set({ isLoading: true });
+      console.log('🔄 Cargando datos de cuenta...');
+      
+      const cuentaData = await cuentaActions.obtenerCuenta();
+      
+      if (cuentaData) {
+        set({ cuenta: cuentaData, isLoading: false });
+        console.log('✅ Cuenta cargada:', cuentaData.saldo);
+      } else {
+        set({ isLoading: false });
+        console.log('❌ No se pudo cargar la cuenta');
+      }
+    } catch (error) {
+      console.error('❌ Error cargando cuenta:', error);
+      set({ isLoading: false });
     }
-    
-  } catch (error) {
-    console.log('❌ Error en loadCuenta:', error);
-  }
-},
-
+  },
 }))

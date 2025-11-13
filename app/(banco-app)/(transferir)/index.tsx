@@ -14,40 +14,32 @@ import {
   View
 } from "react-native";
 
-import { cuentaActions } from "@/core/banco/cuentaActions";
+import { transferenciaActions } from "@/core/banco/transferencias.actions";
+
+import { useToast } from "@/hooks/useToasts";
 import { useDestinatariosStore } from '@/presentation/destinatarios/store/useDestinatariosStore';
 import { useTransferenciaStore } from "@/presentation/transferencias/store/useTransferenciasStore";
-
 
 const TransferirScreen = ({ onClose }: { onClose?: () => void }) => {
   const [amount, setAmount] = useState('');
   const [recipientSearch, setRecipientSearch] = useState('');
   const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [cuentaUsuario, setCuentaUsuario] = useState<any>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedDestinatario, setSelectedDestinatario] = useState<any>(null);
+  const [transferenciaCompletada, setTransferenciaCompletada] = useState(false);
 
-  const { token } = useAuthStore();
-  const { 
-    realizarTransferencia,
-    error,
-    clearError
-  } = useTransferenciaStore();
+  const { token, cuenta: cuentaUsuario, loadCuenta } = useAuthStore();
+  const { error, clearError } = useTransferenciaStore();
+  const { destinatarios, obtenerDestinatarios, loading: loadingDestinatarios } = useDestinatariosStore();
+  
+  const { toast } = useToast();
 
-  const { 
-    destinatarios, 
-    obtenerDestinatarios, 
-    loading: loadingDestinatarios 
-  } = useDestinatariosStore();
-
-  // Obtener cuenta del usuario y destinatarios al cargar
   useEffect(() => {
-    obtenerCuentaUsuario();
+    loadCuenta();
     obtenerDestinatarios();
   }, []);
 
-  // Limpiar errores
   useEffect(() => {
     if (error) {
       Alert.alert('Error', error);
@@ -55,20 +47,10 @@ const TransferirScreen = ({ onClose }: { onClose?: () => void }) => {
     }
   }, [error]);
 
-  // Filtrar destinatarios según búsqueda
   const filteredDestinatarios = destinatarios.filter(destinatario =>
     destinatario.nombre.toLowerCase().includes(recipientSearch.toLowerCase()) ||
     destinatario.numero_cuenta.includes(recipientSearch)
   );
-
-  const obtenerCuentaUsuario = async () => {
-    try {
-      const cuenta = await cuentaActions.obtenerCuenta();
-      setCuentaUsuario(cuenta);
-    } catch (error) {
-      console.log('❌ Error obteniendo cuenta:', error);
-    }
-  };
 
   const seleccionarDestinatario = (destinatario: any) => {
     setSelectedDestinatario(destinatario);
@@ -79,26 +61,28 @@ const TransferirScreen = ({ onClose }: { onClose?: () => void }) => {
   const handleTransfer = async () => {
     // Validaciones
     if (isNaN(Number(amount)) || Number(amount) <= 0) {
-      Alert.alert('Error', 'El monto debe ser un número válido y mayor a 0');
+      toast.error('Error', 'El monto debe ser un número válido y mayor a 0');
       return;
     }
 
     if (!cuentaUsuario) {
-      Alert.alert('Error', 'No se pudo obtener la información de tu cuenta');
+      toast.error('Error', 'No se pudo obtener la información de tu cuenta');
       return;
     }
 
+    // Validación de saldo en frontend (preventiva)
     if (Number(amount) > cuentaUsuario.saldo) {
-      Alert.alert('Error', 'Saldo insuficiente para realizar la transferencia');
+      toast.error('Saldo Insuficiente', 'No tienes suficiente saldo para realizar esta transferencia');
       return;
     }
 
     if (!amount || !selectedDestinatario) {
-      Alert.alert('Error', 'Por favor selecciona un destinatario e ingresa el monto');
+      toast.error('Datos Incompletos', 'Por favor selecciona un destinatario e ingresa el monto');
       return;
     }
 
     setIsSubmitting(true);
+    setTransferenciaCompletada(false);
 
     try {
       console.log('🔄 Iniciando transferencia...', {
@@ -107,45 +91,73 @@ const TransferirScreen = ({ onClose }: { onClose?: () => void }) => {
         cuenta_destino: selectedDestinatario.numero_cuenta
       });
 
-      // Usar cuentaActions para la transferencia
-      const transferenciaExitosa = await cuentaActions.realizarTransferencia({
+      const datosTransferencia = {
         cuenta_destino: selectedDestinatario.numero_cuenta,
         monto: Number(amount),
         descripcion: description || `Transferencia a ${selectedDestinatario.nombre}`
-      });
+      };
 
-      if (transferenciaExitosa) {
-        Alert.alert(
-  '✅ Transferencia Exitosa',
-  `Has transferido $${Number(amount).toLocaleString()} a ${selectedDestinatario.nombre}`,
-  [{ 
-    text: 'Aceptar', 
-    onPress: () => {
-      obtenerCuentaUsuario(); // Actualizar saldo
-      // Verificar si onClose existe
-      if (onClose) {
-        onClose();
-      } else {
-        // Si no hay onClose, simplemente limpiar el formulario
+      await transferenciaActions.realizarTransferencia(datosTransferencia, token || '');
+
+      // Éxito
+      await loadCuenta();
+      setTransferenciaCompletada(true);
+      
+      toast.transfer(
+        '✅ Transferencia Exitosa', 
+        `Enviado a ${selectedDestinatario.nombre}`,
+        Number(amount)
+      );
+
+      // Limpiar formulario después de un delay
+      setTimeout(() => {
         setAmount('');
         setDescription('');
         setSelectedDestinatario(null);
         setRecipientSearch('');
-      }
-    }
-  }]
-);
-      }
+        setTransferenciaCompletada(false);
+        if (onClose) onClose();
+      }, 2000);
 
     } catch (error: any) {
-      console.log('❌ Error en transferencia:', error);
-      Alert.alert('Error', error.message || 'No se pudo completar la transferencia');
+      console.log('❌ Error capturado en screen:', {
+        message: error.message,
+        isInsufficientFunds: error.isInsufficientFunds
+      });
+      
+      setTransferenciaCompletada(false);
+      
+      // Manejar error específico de saldo insuficiente
+      if (error.message.includes('Saldo insuficiente') || error.isInsufficientFunds) {
+        toast.error(
+          '❌ Saldo Insuficiente',
+          'No tienes suficiente saldo para realizar esta transferencia'
+        );
+      } else if (error.message.includes('Cuenta destino no encontrada')) {
+        toast.error(
+          '❌ Cuenta No Encontrada',
+          'La cuenta destino no existe o es inválida'
+        );
+      } else {
+        // Error genérico
+        toast.error(
+          '❌ Transferencia Fallida',
+          error.message || 'No se pudo completar la transferencia'
+        );
+      }
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const saldoDisponible = cuentaUsuario?.saldo || 0;
+  const montoNumerico = Number(amount) || 0;
+  
+  // Condiciones mejoradas para evitar estilos rojos después de transferencia
+  const mostrarValidaciones = !transferenciaCompletada && amount !== '';
+  const saldoInsuficiente = mostrarValidaciones && montoNumerico > saldoDisponible;
+  const botonDeshabilitado = isSubmitting || !selectedDestinatario || 
+                            (mostrarValidaciones && (saldoInsuficiente || montoNumerico <= 0));
 
   return (
     <KeyboardAvoidingView 
@@ -195,6 +207,10 @@ const TransferirScreen = ({ onClose }: { onClose?: () => void }) => {
                       setShowSuggestions(true);
                       if (!text) {
                         setSelectedDestinatario(null);
+                      }
+                      // Resetear estado de completado cuando el usuario empiece a escribir
+                      if (transferenciaCompletada) {
+                        setTransferenciaCompletada(false);
                       }
                     }}
                     onFocus={() => setShowSuggestions(true)}
@@ -261,25 +277,38 @@ const TransferirScreen = ({ onClose }: { onClose?: () => void }) => {
               <Text className="text-lg font-bold text-gray-900 mb-4">Monto</Text>
               <View className="relative">
                 <TextInput
-                  className="bg-gray-50 p-4 rounded-xl border border-gray-200 text-gray-900 text-2xl font-bold pl-12"
+                  className={`bg-gray-50 p-4 rounded-xl border text-gray-900 text-2xl font-bold pl-12 ${
+                    // Solo mostrar rojo si NO es después de transferencia exitosa y hay saldo insuficiente
+                    saldoInsuficiente ? 'border-red-300 bg-red-50' : 'border-gray-200'
+                  }`}
                   placeholder="0"
                   placeholderTextColor="#9CA3AF"
                   keyboardType="decimal-pad"
                   value={amount}
-                  onChangeText={setAmount}
+                  onChangeText={(text) => {
+                    setAmount(text);
+                    // Resetear estado de completado cuando el usuario empiece a escribir
+                    if (transferenciaCompletada) {
+                      setTransferenciaCompletada(false);
+                    }
+                  }}
                 />
                 <Text className="absolute left-4 top-4 text-2xl font-bold text-gray-500">$</Text>
               </View>
               
-              {amount && (
+              {/* Mostrar información de saldo solo cuando sea relevante */}
+              {mostrarValidaciones && (
                 <View className="flex-row justify-between mt-2">
                   <Text className="text-gray-600 text-sm">
-                    {Number(amount).toLocaleString()} pesos
+                    {montoNumerico.toLocaleString()} pesos
                   </Text>
-                  <Text className={`text-sm ${
-                    Number(amount) > saldoDisponible ? 'text-red-500' : 'text-green-600'
+                  <Text className={`text-sm font-medium ${
+                    saldoInsuficiente ? 'text-red-500' : 'text-green-600'
                   }`}>
-                    Saldo después: ${(saldoDisponible - Number(amount)).toLocaleString()}
+                    {saldoInsuficiente 
+                      ? '❌ Saldo insuficiente' 
+                      : `Saldo después: $${(saldoDisponible - montoNumerico).toLocaleString()}`
+                    }
                   </Text>
                 </View>
               )}
@@ -293,17 +322,47 @@ const TransferirScreen = ({ onClose }: { onClose?: () => void }) => {
                 placeholder={`Ej: Pago a ${selectedDestinatario?.nombre || 'destinatario'}`}
                 placeholderTextColor="#9CA3AF"
                 value={description}
-                onChangeText={setDescription}
+                onChangeText={(text) => {
+                  setDescription(text);
+                  // Resetear estado de completado cuando el usuario empiece a escribir
+                  if (transferenciaCompletada) {
+                    setTransferenciaCompletada(false);
+                  }
+                }}
               />
             </View>
 
+            {/* Mostrar advertencia solo si hay saldo insuficiente y NO es después de transferencia */}
+            {saldoInsuficiente && (
+              <View className="mb-4 p-3 bg-red-50 rounded-xl border border-red-200">
+                <Text className="text-red-800 font-bold mb-1">❌ Saldo insuficiente</Text>
+                <Text className="text-red-700 text-sm">
+                  Necesitas ${montoNumerico.toLocaleString()} pero solo tienes ${saldoDisponible.toLocaleString()} disponible.
+                </Text>
+              </View>
+            )}
+
+            {/* Mensaje de éxito después de transferencia */}
+            {transferenciaCompletada && (
+              <View className="mb-4 p-3 bg-green-50 rounded-xl border border-green-200">
+                <Text className="text-green-800 font-bold mb-1">✅ Transferencia exitosa</Text>
+                <Text className="text-green-700 text-sm">
+                  Se envió ${montoNumerico.toLocaleString()} a {selectedDestinatario?.nombre}. El formulario se limpiará automáticamente.
+                </Text>
+              </View>
+            )}
+
             {/* Botón de transferencia */}
             <TouchableOpacity
-              className={`bg-blue-600 p-5 rounded-2xl shadow-lg mt-4 ${
-                isSubmitting || !selectedDestinatario ? 'opacity-50' : ''
+              className={`p-5 rounded-2xl shadow-lg mt-4 ${
+                botonDeshabilitado 
+                  ? 'bg-gray-400 opacity-50' 
+                  : transferenciaCompletada 
+                    ? 'bg-green-600' 
+                    : 'bg-blue-600'
               }`}
               onPress={handleTransfer}
-              disabled={isSubmitting || !selectedDestinatario}
+              disabled={botonDeshabilitado}
             >
               <View className="flex-row items-center justify-center">
                 {isSubmitting ? (
@@ -311,12 +370,19 @@ const TransferirScreen = ({ onClose }: { onClose?: () => void }) => {
                     <ActivityIndicator size="small" color="white" />
                     <Text className="text-white font-bold text-lg ml-2">Procesando...</Text>
                   </>
+                ) : transferenciaCompletada ? (
+                  <>
+                    <Text className="text-white font-bold text-lg">✅ Transferencia completada</Text>
+                  </>
                 ) : (
                   <>
                     <Text className="text-white font-bold text-lg">
-                      Transferir a {selectedDestinatario?.nombre || 'destinatario'}
+                      {saldoInsuficiente 
+                        ? 'Saldo insuficiente' 
+                        : `Transferir $${montoNumerico > 0 ? montoNumerico.toLocaleString() : ''} a ${selectedDestinatario?.nombre || 'destinatario'}`
+                      }
                     </Text>
-                    <Text className="text-white ml-2">➔</Text>
+                    {!saldoInsuficiente && montoNumerico > 0 && <Text className="text-white ml-2">➔</Text>}
                   </>
                 )}
               </View>

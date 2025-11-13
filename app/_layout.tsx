@@ -1,6 +1,9 @@
 // app/(banco-app)/_layout.tsx
 
 import { allRoutes } from '@/constants/Routes';
+import { ToastProvider } from '@/providers/ToastProviders';
+
+
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -15,6 +18,7 @@ export default function BancoAppLayout() {
   return (
     <GestureHandlerRootView style={{ backgroundColor: backgroundColor, flex: 1 }}>
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <ToastProvider>
         <Stack
           screenOptions={{ 
             headerShadowVisible: false,
@@ -39,6 +43,7 @@ export default function BancoAppLayout() {
           ))}
         </Stack>
         <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+        </ToastProvider>
       </ThemeProvider>
     </GestureHandlerRootView>
   );

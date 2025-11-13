@@ -6,19 +6,17 @@ import { useTransferenciaStore } from '@/presentation/transferencias/store/useTr
 import { useFocusEffect } from '@react-navigation/native';
 import { Link, router } from 'expo-router';
 import { Bell } from 'lucide-react-native';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import NuevoDestinatarioModal from '../(nuevo_destinatario)/NuevoDestinatarioModal';
 
-
-const index = () => {
+const HomeScreen = () => {
   const { user, cuenta, status, loadCuenta, token } = useAuthStore();
   const { transferencias, loading, obtenerTransferencias } = useTransferenciaStore();
-  const { unreadCount } = useNotificationStore();
+  const { unreadCount, sincronizarNotificaciones } = useNotificationStore(); // ← AGREGAR sincronizarNotificaciones
   const [refreshing, setRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-
-  const [modalDestinatarioVisible, setModalDestinatarioVisible] = useState(false)
+  const [modalDestinatarioVisible, setModalDestinatarioVisible] = useState(false);
 
   const formatChileanPeso = (amount: number | string): string => {
     const numericAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
@@ -31,26 +29,65 @@ const index = () => {
     }).format(numericAmount);
   };
 
-  // 🔄 ACTUALIZAR SALDO Y TRANSFERENCIAS CADA VEZ QUE LA PANTALLA SE ENFOQUE
+  // 🔄 CARGAR DATOS INICIALES INCLUYENDO NOTIFICACIONES
+  useEffect(() => {
+    if (status === 'authenticated' && token) {
+      console.log('🏠 Cargando datos iniciales del home...');
+      const cargarDatosIniciales = async () => {
+        try {
+          await loadCuenta();
+          await obtenerTransferencias(token);
+          await sincronizarNotificaciones(); // ← CARGAR NOTIFICACIONES AL INICIAR
+        } catch (error) {
+          console.log('❌ Error cargando datos iniciales:', error);
+        }
+      };
+      cargarDatosIniciales();
+    }
+  }, [status, token]);
+
+  // 🔄 ACTUALIZAR EN TIEMPO REAL CADA VEZ QUE LA PANTALLA SE ENFOQUE
   useFocusEffect(
     useCallback(() => {
-      console.log('🏠 HomeScreen enfocada - Actualizando saldo y transferencias...');
-      loadCuenta();
-      if (token) {
-        obtenerTransferencias(token);
-      }
+      console.log('🏠 HomeScreen enfocada - Actualizando en tiempo real...');
+      
+      const actualizarDatos = async () => {
+        try {
+          await loadCuenta();
+          if (token) {
+            await obtenerTransferencias(token);
+            await sincronizarNotificaciones(); // ← ACTUALIZAR NOTIFICACIONES EN TIEMPO REAL
+          }
+        } catch (error) {
+          console.log('❌ Error actualizando datos:', error);
+        }
+      };
+
+      actualizarDatos();
+
+      // 🕐 OPCIONAL: Actualizar cada 30 segundos mientras está en foco
+      const interval = setInterval(actualizarDatos, 30000);
+
+      return () => clearInterval(interval);
     }, [token])
   );
 
-  // 🔄 PULL TO REFRESH
+  // 🔄 PULL TO REFRESH MEJORADO
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    console.log('🔄 Pull to refresh - Actualizando datos...');
-    await Promise.all([
-      loadCuenta(),
-      token ? obtenerTransferencias(token) : Promise.resolve()
-    ]);
-    setRefreshing(false);
+    console.log('🔄 Pull to refresh - Actualizando todo...');
+    
+    try {
+      await Promise.all([
+        loadCuenta(),
+        token ? obtenerTransferencias(token) : Promise.resolve(),
+        sincronizarNotificaciones() // ← ACTUALIZAR NOTIFICACIONES AL REFRESCAR
+      ]);
+    } catch (error) {
+      console.log('❌ Error en refresh:', error);
+    } finally {
+      setRefreshing(false);
+    }
   }, [token]);
 
   // 🔄 ACTUALIZAR AL VOLVER DE TRANSFERENCIA
@@ -59,21 +96,21 @@ const index = () => {
     router.push('/(banco-app)/(transferir)');
   };
 
-  // ACTUALIZAR CUANDO EL COMPONENTE SE MONTA
-  React.useEffect(() => {
-    if (status === 'authenticated' && token) {
-      console.log('🔄 Cargando cuenta inicial y transferencias...');
-      loadCuenta();
-      obtenerTransferencias(token);
-    }
-  }, [status, token]);
-
   // QUITAR LOADING CUANDO LA CUENTA SE CARGA
-  React.useEffect(() => {
+  useEffect(() => {
     if (cuenta) {
       setIsLoading(false);
     }
   }, [cuenta]);
+
+  // 🔍 DEBUG: Verificar estado de notificaciones
+  useEffect(() => {
+    console.log('📊 Estado de notificaciones en Home:', {
+      unreadCount,
+      hasUnread: unreadCount > 0,
+      timestamp: new Date().toLocaleTimeString()
+    });
+  }, [unreadCount]);
 
   // OBTENER ÚLTIMAS 3 TRANSFERENCIAS
   const ultimasTransferencias = transferencias
@@ -85,7 +122,7 @@ const index = () => {
     const nombre = transaccion.nombre_destinatario || transaccion.nombre_remitente;
     
     if (nombre) {
-      return nombre; // Solo el nombre, sin prefijos
+      return nombre;
     }
     
     return transaccion.tipo_transaccion === 'TRANSFERENCIA_ENVIADA' ? 'Destinatario' : 'Remitente';
@@ -108,7 +145,7 @@ const index = () => {
         <ActivityIndicator size="large" color="#2563eb" />
         <Text className="text-gray-600 mt-4">Verificando usuario...</Text>
       </View>
-    )
+    );
   }
 
   return (
@@ -121,9 +158,14 @@ const index = () => {
             <Text className="text-gray-600 mt-1">¡Hola {user?.nombre}!</Text>
           </View>
           
-          {/* CAMPANITA DE NOTIFICACIONES */}
+          {/* CAMPANITA DE NOTIFICACIONES MEJORADA */}
           <TouchableOpacity 
-            onPress={() => router.push('/(banco-app)/(notificaciones)')}
+            onPress={async () => {
+              console.log('🔔 Navegando a notificaciones...');
+              // Sincronizar antes de navegar para tener datos frescos
+              await sincronizarNotificaciones();
+              router.push('/(banco-app)/(notificaciones)');
+            }}
             className="relative p-2 ml-4"
           >
             <Bell size={24} color="#374151" />
@@ -303,12 +345,11 @@ const index = () => {
         visible={modalDestinatarioVisible}
         onClose={() => setModalDestinatarioVisible(false)}
         onDestinatarioAgregado={() => {
-        // Recargar lista de destinatarios si es necesario
-        console.log('Destinatario agregado exitosamente')
-      }}
+          console.log('Destinatario agregado exitosamente');
+        }}
       />
     </View>
   );
-}
+};
 
-export default index;
+export default HomeScreen;
