@@ -1,3 +1,4 @@
+import { useNotificationStore } from "@/presentation/notificaciones/store/useNotificationStore";
 import { Alert } from "react-native";
 import bancoApi from "../api/BancoApi"; // ← Usar tu bancoApi
 import { CreateDestinatarioData, Destinatario } from "../auth/interfaces/destinatarios";
@@ -16,9 +17,16 @@ export const destinatarioActions = {
 
       if (data.success) {
         console.log('✅ Destinatario creado exitosamente');
-        // Retornar el destinatario creado (el backend debería retornar el objeto completo)
+        
+        // ✅ NOTIFICACIÓN DE DESTINATARIO CREADO
+        useNotificationStore.getState().addNotification({
+          type: 'success',
+          title: 'Destinatario agregado',
+          message: `Agregaste a ${destinatarioData.nombre} como destinatario`
+        });
+        
         return {
-          id: Date.now(), // Temporal - el backend debería retornar el ID real
+          id: Date.now(),
           ...destinatarioData
         };
       } else {
@@ -27,6 +35,14 @@ export const destinatarioActions = {
     } catch (error: any) {
       console.log('❌ Error creando destinatario', error.response?.data);
       const errorMessage = error.response?.data?.message || 'Error al crear destinatario';
+      
+      // ✅ NOTIFICACIÓN DE ERROR
+      useNotificationStore.getState().addNotification({
+        type: 'error',
+        title: 'Error al agregar destinatario',
+        message: errorMessage
+      });
+      
       Alert.alert('Error', errorMessage);
       throw new Error(errorMessage);
     }

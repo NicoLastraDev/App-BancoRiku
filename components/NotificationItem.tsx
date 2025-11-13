@@ -103,12 +103,12 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ notification
             <View className="w-2 h-2 bg-blue-500 rounded-full" />
           )}
           
-          <TouchableOpacity 
+          {/* <TouchableOpacity 
             onPress={handleDelete}
             className="p-1"
           >
             <Text className="text-gray-400 text-xs">Eliminar</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
       </View>
 

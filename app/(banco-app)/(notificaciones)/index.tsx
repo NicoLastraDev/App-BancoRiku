@@ -4,7 +4,7 @@ import { NotificationItem } from '@/components/NotificationItem';
 import { AppNotification } from '@/core/banco/interfaces/notificaciones';
 import { useNotificationStore } from '@/presentation/notificaciones/store/useNotificationStore';
 import React from 'react';
-import { FlatList, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, Text, View } from 'react-native';
 
 export const NotificationsScreen: React.FC = () => {
   const { notifications, unreadCount, markAllAsRead, clearAll } = useNotificationStore();
@@ -24,7 +24,7 @@ export const NotificationsScreen: React.FC = () => {
             </Text>
           </View>
           
-          <View className="flex-row space-x-3">
+          {/* <View className="flex-row space-x-3">
             {unreadCount > 0 && (
               <TouchableOpacity 
                 onPress={markAllAsRead}
@@ -42,7 +42,7 @@ export const NotificationsScreen: React.FC = () => {
                 <Text className="text-gray-700 font-semibold">Limpiar</Text>
               </TouchableOpacity>
             )}
-          </View>
+          </View> */}
         </View>
       </View>
 
@@ -71,3 +71,4 @@ export const NotificationsScreen: React.FC = () => {
 
 
 export { NotificationsScreen as default } from "@/app/(banco-app)/(notificaciones)/index";
+

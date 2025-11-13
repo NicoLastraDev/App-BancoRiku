@@ -2,7 +2,9 @@ import { authCheckStatus, authLogin, authRegister } from '@/core/auth/actions/au
 import { User } from '@/core/auth/interfaces/user';
 import { cuentaActions } from '@/core/banco/cuentaActions';
 import { Cuenta } from '@/core/banco/interfaces/cuentas';
-import { SecureStorageAdapter } from '@/helpers/adapters/secure-storage-adapter';
+
+import { universalStorage } from '@/helpers/adapters/universalStorageAdapter';
+import { Platform } from 'react-native'; // ← AGREGAR IMPORT
 import { create } from 'zustand';
 
 export type authStatus = 'authenticated' | 'unauthenticathed' | 'checking'
@@ -11,15 +13,15 @@ export interface authState {
   status: authStatus,
   token?: string,
   user?: User,
-  cuenta?: Cuenta, // ← Agregar cuenta al store
+  cuenta?: Cuenta,
 
   login: (email: string, password: string) => Promise<Boolean>,
   register: (nombre: string, email: string, password: string) => Promise<Boolean>,
   checkStatus: () => Promise<void>,
   logout: () => Promise<void>,
   changeStatus: (token?: string, user?: User) => Promise<boolean>,
-  setCuenta: (cuenta: Cuenta) => void, // ← Nueva función
-  loadCuenta: () => Promise<void>, // ← Nueva función
+  setCuenta: (cuenta: Cuenta) => void,
+  loadCuenta: () => Promise<void>,
 }
 
 export const useAuthStore = create<authState>()((set, get) => ({
@@ -29,7 +31,7 @@ export const useAuthStore = create<authState>()((set, get) => ({
   cuenta: undefined,
 
   changeStatus: async(token?: string, user?: User) => {
-  console.log('🔄 changeStatus llamado:', { 
+  console.log('🔄 changeStatus llamado - Plataforma:', Platform.OS, { 
     token: !!token, 
     user: user,
     userId: user?.id 
@@ -38,7 +40,7 @@ export const useAuthStore = create<authState>()((set, get) => ({
   if(!token || !user){
     console.log('❌ Sin token o usuario, logout');
     set({ status: 'unauthenticathed', token: undefined, user: undefined, cuenta: undefined })
-    await SecureStorageAdapter.deleteItem('token')
+    await universalStorage.deleteItem('token') // ← CAMBIADO
     return false
   }
 
@@ -50,7 +52,7 @@ export const useAuthStore = create<authState>()((set, get) => ({
 
   console.log('✅ Autenticando usuario ID:', user.id);
   set({ status: 'authenticated', token: token, user: user })
-  await SecureStorageAdapter.setItem('token', token)
+  await universalStorage.setItem('token', token) // ← CAMBIADO
   
   // Cargar cuenta después de autenticar
   console.log('🔄 Llamando loadCuenta...');
@@ -59,7 +61,7 @@ export const useAuthStore = create<authState>()((set, get) => ({
 },
 
   login: async(email: string, password: string) => {
-  console.log('🔄 Store: login llamado con email:', email);
+  console.log('🔄 Store: login llamado con email:', email, 'Plataforma:', Platform.OS);
   
   const resp = await authLogin(email, password)
   
@@ -68,7 +70,6 @@ export const useAuthStore = create<authState>()((set, get) => ({
   console.log('🆔 Store: user ID:', resp?.user?.id);
   console.log('🔑 Store: token:', resp?.token);
   
-  // ✅ AGREGAR ESTE CONSOLE CRÍTICO:
   console.log('🎯 ANTES de changeStatus - user tiene id?:', !!resp?.user?.id);
   console.log('🎯 user completo:', resp?.user);
   
@@ -76,12 +77,33 @@ export const useAuthStore = create<authState>()((set, get) => ({
 },
 
   checkStatus: async() => {
-    const resp = await authCheckStatus()
-    await get().changeStatus(resp?.token, resp?.user)
+    console.log('🔍 checkStatus - Plataforma:', Platform.OS);
+    try {
+      const storedToken = await universalStorage.getItem('token'); // ← CAMBIADO
+      console.log('🔍 Token en storage:', storedToken ? 'SÍ' : 'NO');
+      
+      if (storedToken) {
+        const resp = await authCheckStatus()
+        if (resp?.token && resp?.user) {
+          await get().changeStatus(resp.token, resp.user)
+        } else {
+          // Token inválido, hacer logout
+          console.log('❌ Token inválido, haciendo logout');
+          await get().logout()
+        }
+      } else {
+        console.log('🔍 No hay token guardado');
+        set({ status: 'unauthenticathed', token: undefined, user: undefined })
+      }
+    } catch (error) {
+      console.log('❌ Error en checkStatus:', error);
+      set({ status: 'unauthenticathed', token: undefined, user: undefined })
+    }
   },
 
   logout: async() => {
-    await SecureStorageAdapter.deleteItem('token')
+    console.log('🚪 logout - Plataforma:', Platform.OS);
+    await universalStorage.deleteItem('token') // ← CAMBIADO
     set({
       status: "unauthenticathed", 
       token: undefined, 
@@ -109,9 +131,8 @@ export const useAuthStore = create<authState>()((set, get) => ({
 
   loadCuenta: async () => {
   try {
-    console.log('🔄 Store: loadCuenta llamado');
+    console.log('🔄 Store: loadCuenta llamado - Plataforma:', Platform.OS);
     
-    // ✅ SIGUIENDO EL MISMO PATRÓN QUE login/register
     const resp = await cuentaActions.obtenerCuenta();
     
     console.log('📦 Store: respuesta de obtenerCuenta:', resp);
@@ -125,7 +146,6 @@ export const useAuthStore = create<authState>()((set, get) => ({
     
   } catch (error) {
     console.log('❌ Error en loadCuenta:', error);
-    // El Alert ya se maneja en cuentaActions.obtenerCuenta()
   }
 },
 

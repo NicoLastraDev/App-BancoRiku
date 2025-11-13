@@ -1,3 +1,4 @@
+import { useNotificationStore } from "@/presentation/notificaciones/store/useNotificationStore";
 import bancoApi from "../api/BancoApi";
 import { CreateTransferenciaData, Cuenta, Transferencia } from "./interfaces/transferencias";
 
@@ -17,15 +18,30 @@ export interface Tarjeta {
 export const transferenciaActions = {
 
   // Crear transferencia
-  realizarTransferencia: async(data: CreateTransferenciaData, token: string): Promise<Transferencia> => {
+   realizarTransferencia: async(data: CreateTransferenciaData, token: string): Promise<Transferencia> => {
     try {
       const response = await bancoApi.post<Transferencia>('/transferencias', data);
+      
+      // ✅ NOTIFICACIÓN DE ÉXITO
+      useNotificationStore.getState().addNotification({
+        type: 'success',
+        title: 'Transferencia exitosa',
+        message: `Enviaste $${data.monto} a cuenta ${data.cuenta_destino}`,
+        action: { 
+          type: 'transferencia',
+          data: response.data 
+        }
+      });
+      
       return response.data;
     } catch (error: any) {
-      if(error.response?.data?.message) {
-        throw new Error(error.response.data.message);
-      }
-      throw new Error('Error de conexión al realizar la transferencia');
+      // ✅ NOTIFICACIÓN DE ERROR
+      useNotificationStore.getState().addNotification({
+        type: 'error',
+        title: 'Error en transferencia',
+        message: error.response?.data?.message || 'No se pudo completar la transferencia'
+      });
+      throw error;
     }
   },
 

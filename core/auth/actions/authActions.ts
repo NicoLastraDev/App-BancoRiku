@@ -23,6 +23,8 @@ const returnUserToken = (data: AuthResponse) => {
   };
 }
 
+import { useNotificationStore } from '@/presentation/notificaciones/store/useNotificationStore';
+
 export const authLogin = async (email: string, password: string) => {
   try {
     console.log('🚀 authLogin - Haciendo request...');
@@ -30,7 +32,13 @@ export const authLogin = async (email: string, password: string) => {
     console.log('✅ authLogin - Respuesta del backend:', response.data);
     
     const result = returnUserToken(response.data);
-    console.log('🔄 authLogin - Después de returnUserToken:', result);
+    
+    // ✅ NOTIFICACIÓN DE LOGIN EXITOSO
+    useNotificationStore.getState().addNotification({
+      type: 'success',
+      title: 'Bienvenido',
+      message: `Hola ${result.user.nombre}`
+    });
     
     return result;
   } catch (error) {
@@ -39,16 +47,7 @@ export const authLogin = async (email: string, password: string) => {
   }
 };
 
-export const authCheckStatus = async() => {
-  try {
-    const { data } = await bancoApi.get('/auth/check-status')
-    return returnUserToken(data)
-  } catch (error) {
-    return null
-  }
-}
-
-// REGISTER actualizado
+// REGISTER actualizado - AGREGAR NOTIFICACIÓN
 export const authRegister = async(nombre: string, email: string, password: string) => {
   email = email.toLowerCase()
   console.log('🔄 [FRONTEND 1] authRegister llamado:', email);
@@ -62,11 +61,28 @@ export const authRegister = async(nombre: string, email: string, password: strin
     })
 
     console.log('✅ [FRONTEND 3] Registro EXITOSO:', data);
-    return returnUserToken(data)
+    const result = returnUserToken(data);
+    
+    // ✅ NOTIFICACIÓN DE REGISTRO EXITOSO
+    useNotificationStore.getState().addNotification({
+      type: 'success',
+      title: '¡Cuenta creada!',
+      message: 'Tu cuenta ha sido creada exitosamente'
+    });
+    
+    return result;
 
   } catch (error: any) {
     console.log('❌ [FRONTEND ERROR] En registro:', error.response?.data);
     const errorMessage = error.response?.data?.message || 'Ha fallado la creación del usuario';
+    
+    // ✅ NOTIFICACIÓN DE ERROR EN REGISTRO
+    useNotificationStore.getState().addNotification({
+      type: 'error',
+      title: 'Error en registro',
+      message: errorMessage
+    });
+    
     Alert.alert('Error', errorMessage);
     return null
   }
