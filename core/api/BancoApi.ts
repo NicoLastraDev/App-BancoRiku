@@ -9,10 +9,10 @@ console.log('🔧 === INICIANDO BANCO API ===');
 
 const config = Constants.expoConfig?.extra || {};
 
-const STAGE = config.EXPO_PUBLIC_STAGE || 'dev';
-const API_URL_BASE = config.EXPO_PUBLIC_API_URL || 'http://localhost:4000/api';
-const API_URL_IOS = config.EXPO_PUBLIC_API_URL_IOS || 'http://192.168.1.6:4000/api';
-const API_URL_ANDROID = config.EXPO_PUBLIC_API_URL_ANDROID || 'http://192.168.1.6:4000/api';
+const STAGE = config.EXPO_PUBLIC_STAGE || 'prod';
+const API_URL_BASE = config.EXPO_PUBLIC_API_URL || 'https://banco-riku-backend-express-js.onrender.com/api';
+const API_URL_IOS = config.EXPO_PUBLIC_API_URL_IOS || 'https://banco-riku-backend-express-js.onrender.com/api';
+const API_URL_ANDROID = config.EXPO_PUBLIC_API_URL_ANDROID || 'https://banco-riku-backend-express-js.onrender.com/api';
 
 console.log('🏷️ STAGE:', STAGE);
 console.log('📡 API_URL_BASE:', API_URL_BASE);
@@ -40,7 +40,7 @@ try {
   console.log('❌ Error creando axios instance:', error);
   // Fallback a una URL base
   bancoApi = axios.create({
-    baseURL: 'http://192.168.1.6:4000/api',
+    baseURL: 'https://banco-riku-backend-express-js.onrender.com/api',
     timeout: 10000,
   });
 }
