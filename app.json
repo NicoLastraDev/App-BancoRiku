@@ -1,0 +1,49 @@
+{
+  "expo": {
+    "name": "banco-riku",
+    "slug": "banco-riku",
+    "extra": {
+      "EXPO_PUBLIC_STAGE": "prod",
+      "EXPO_PUBLIC_API_URL": "https://banco-riku-backend-express-js.onrender.com/api",
+      "EXPO_PUBLIC_API_URL_IOS": "https://banco-riku-backend-express-js.onrender.com/api",
+      "EXPO_PUBLIC_API_URL_ANDROID": "https://banco-riku-backend-express-js.onrender.com/api"
+    },
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "bancoriku",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "package": "com.anonymous.bancoriku"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
