@@ -6,7 +6,11 @@
       "EXPO_PUBLIC_STAGE": "prod",
       "EXPO_PUBLIC_API_URL": "https://banco-riku-backend-express-js.onrender.com/api",
       "EXPO_PUBLIC_API_URL_IOS": "https://banco-riku-backend-express-js.onrender.com/api",
-      "EXPO_PUBLIC_API_URL_ANDROID": "https://banco-riku-backend-express-js.onrender.com/api"
+      "EXPO_PUBLIC_API_URL_ANDROID": "https://banco-riku-backend-express-js.onrender.com/api",
+      "router": {},
+      "eas": {
+        "projectId": "da5c7c47-a89d-4850-a292-e57623528eda"
+      }
     },
     "version": "1.0.0",
     "orientation": "portrait",
@@ -19,7 +23,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/adaptiveIcon.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,

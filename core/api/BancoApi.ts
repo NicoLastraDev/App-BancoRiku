@@ -31,7 +31,7 @@ let bancoApi;
 try {
   bancoApi = axios.create({
     baseURL: API_URL,
-    timeout: 30000,
+    timeout: 45000,
   });
   
   console.log('✅ Axios instance creada correctamente');
@@ -41,7 +41,7 @@ try {
   // Fallback a una URL base
   bancoApi = axios.create({
     baseURL: 'https://banco-riku-backend.onrender.com/api',
-    timeout: 10000,
+    timeout: 45000,
   });
 }
 
