@@ -1,19 +1,20 @@
 import { FAB } from '@/components/FAB';
 import { ThemedText } from '@/components/ThemedText';
+import { universalStorage } from '@/helpers/adapters/universalStorageAdapter';
 import { useAuthStore } from '@/presentation/auth/store/useAuthStore';
 import { useNotificationStore } from '@/presentation/notificaciones/store/useNotificationStore';
 import { useTransferenciaStore } from '@/presentation/transferencias/store/useTransferenciasStore';
 import { useFocusEffect } from '@react-navigation/native';
 import { Link, router } from 'expo-router';
-import { Bell } from 'lucide-react-native';
+import { Bell, LogOut } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import NuevoDestinatarioModal from '../(nuevo_destinatario)/NuevoDestinatarioModal';
 
 const HomeScreen = () => {
-  const { user, cuenta, status, loadCuenta, token } = useAuthStore();
+  const { user, cuenta, status, loadCuenta, token, logout } = useAuthStore();
   const { transferencias, loading, obtenerTransferencias } = useTransferenciaStore();
-  const { unreadCount, sincronizarNotificaciones } = useNotificationStore(); // ← AGREGAR sincronizarNotificaciones
+  const { unreadCount, sincronizarNotificaciones } = useNotificationStore();
   const [refreshing, setRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [modalDestinatarioVisible, setModalDestinatarioVisible] = useState(false);
@@ -37,7 +38,7 @@ const HomeScreen = () => {
         try {
           await loadCuenta();
           await obtenerTransferencias(token);
-          await sincronizarNotificaciones(); // ← CARGAR NOTIFICACIONES AL INICIAR
+          await sincronizarNotificaciones();
         } catch (error) {
           console.log('❌ Error cargando datos iniciales:', error);
         }
@@ -56,7 +57,7 @@ const HomeScreen = () => {
           await loadCuenta();
           if (token) {
             await obtenerTransferencias(token);
-            await sincronizarNotificaciones(); // ← ACTUALIZAR NOTIFICACIONES EN TIEMPO REAL
+            await sincronizarNotificaciones();
           }
         } catch (error) {
           console.log('❌ Error actualizando datos:', error);
@@ -81,7 +82,7 @@ const HomeScreen = () => {
       await Promise.all([
         loadCuenta(),
         token ? obtenerTransferencias(token) : Promise.resolve(),
-        sincronizarNotificaciones() // ← ACTUALIZAR NOTIFICACIONES AL REFRESCAR
+        sincronizarNotificaciones()
       ]);
     } catch (error) {
       console.log('❌ Error en refresh:', error);
@@ -128,6 +129,62 @@ const HomeScreen = () => {
     return transaccion.tipo_transaccion === 'TRANSFERENCIA_ENVIADA' ? 'Destinatario' : 'Remitente';
   };
 
+  // MANEJAR LOGOUT
+  const handleLogout = () => {
+  console.log('🎯 Botón logout presionado');
+  
+  if (Platform.OS === 'web') {
+    // ✅ EN WEB USAR confirm NATIVO
+    const confirmar = window.confirm('¿Estás seguro de que quieres cerrar sesión?');
+    if (confirmar) {
+      console.log('✅ Usuario confirmó en web');
+      ejecutarLogout();
+    } else {
+      console.log('❌ Usuario canceló en web');
+    }
+  } else {
+    // ✅ EN MOBILE USAR Alert NORMAL
+    Alert.alert(
+      'Cerrar Sesión',
+      '¿Estás seguro de que quieres cerrar sesión?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Cerrar Sesión', style: 'destructive', onPress: ejecutarLogout }
+      ]
+    );
+  }
+};
+
+// ✅ FUNCIÓN SEPARADA PARA EL LOGOUT
+const ejecutarLogout = async () => {
+  try {
+    console.log('🔄 Ejecutando proceso de logout...');
+    
+    // 1. Limpiar storage
+    await universalStorage.deleteItem('userToken');
+    console.log('🗑️ Token eliminado del storage');
+    
+    // 2. Limpiar estado del store
+    useAuthStore.setState({
+      status: "unauthenticathed",
+      token: undefined, 
+      user: undefined,
+      cuenta: undefined
+    });
+    console.log('🔄 Estado del store limpiado');
+    
+    // 3. Navegar al login
+    console.log('🧭 Navegando a login...');
+    router.replace('/auth/login');
+    
+    console.log('✅ Logout completado exitosamente');
+    
+  } catch (error) {
+    console.log('💥 Error durante logout:', error);
+    // ✅ NAVEGAR DE TODAS FORMAS AUNQUE HAYA ERROR
+    router.replace('/auth/login');
+  }
+};
   // FUNCIÓN PARA DETERMINAR EL ESTILO DE LA TRANSFERENCIA
   const getTransferenciaStyle = (transferencia: any) => {
     const esEnvio = transferencia.tipo_transaccion === 'TRANSFERENCIA_ENVIADA';
@@ -150,7 +207,7 @@ const HomeScreen = () => {
 
   return (
     <View className="flex-1 bg-gray-50">
-      {/* HEADER PERSONALIZADO SIN BARRA NEGRA */}
+      {/* ✅ HEADER CORREGIDO - CIERRE DE TAGS ARREGLADO */}
       <View className="pt-12 px-4 pb-4 bg-gray-50">
         <View className="flex-row justify-between items-center">
           <View className="flex-1">
@@ -158,25 +215,34 @@ const HomeScreen = () => {
             <Text className="text-gray-600 mt-1">¡Hola {user?.nombre}!</Text>
           </View>
           
-          {/* CAMPANITA DE NOTIFICACIONES MEJORADA */}
-          <TouchableOpacity 
-            onPress={async () => {
-              console.log('🔔 Navegando a notificaciones...');
-              // Sincronizar antes de navegar para tener datos frescos
-              await sincronizarNotificaciones();
-              router.push('/(banco-app)/(notificaciones)');
-            }}
-            className="relative p-2 ml-4"
-          >
-            <Bell size={24} color="#374151" />
-            {unreadCount > 0 && (
-              <View className="absolute -top-1 -right-1 bg-red-500 rounded-full min-w-5 h-5 justify-center items-center">
-                <Text className="text-white text-xs font-bold">
-                  {unreadCount > 99 ? '99+' : unreadCount}
-                </Text>
-              </View>
-            )}
-          </TouchableOpacity>
+          <View className="flex-row items-center">
+            {/* ✅ BOTÓN DE LOGOUT */}
+            <TouchableOpacity 
+              onPress={handleLogout}
+              className="p-2 mr-2 bg-red-50 rounded-full border border-red-200"
+            >
+              <LogOut size={20} color="#dc2626" />
+            </TouchableOpacity>
+
+            {/* CAMPANITA DE NOTIFICACIONES MEJORADA */}
+            <TouchableOpacity 
+              onPress={async () => {
+                console.log('🔔 Navegando a notificaciones...');
+                await sincronizarNotificaciones();
+                router.push('/(banco-app)/(notificaciones)');
+              }}
+              className="relative p-2"
+            >
+              <Bell size={24} color="#374151" />
+              {unreadCount > 0 && (
+                <View className="absolute -top-1 -right-1 bg-red-500 rounded-full min-w-5 h-5 justify-center items-center">
+                  <Text className="text-white text-xs font-bold">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 

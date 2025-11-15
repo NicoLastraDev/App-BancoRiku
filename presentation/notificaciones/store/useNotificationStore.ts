@@ -1,6 +1,7 @@
 import bancoApi from "@/core/api/BancoApi";
 import { AppNotification, CreateNotificationData } from "@/core/banco/interfaces/notificaciones";
 import { notificationActions } from "@/core/banco/notificacionesActions";
+import { PushNotificationService } from "@/core/banco/pushNotifications";
 import { create } from "zustand";
 
 interface NotificationState {
@@ -36,18 +37,31 @@ export const useNotificationStore = create<NotificationState & NotificationActio
 
   // Agregar notificación
   addNotification: (data: CreateNotificationData) => {
-    const newNotification = notificationActions.createLocalNotification(data);
+  const newNotification = notificationActions.createLocalNotification(data);
+  
+  // ✅ ENVIAR NOTIFICACIÓN PUSH CON MANEJO DE ERRORES
+  PushNotificationService.scheduleLocalNotification(
+    data.title,
+    data.message,
+    { 
+      type: data.type,
+      action: data.action 
+    }
+  ).catch(error => {
+    console.log('⚠️ Error enviando notificación push:', error);
+    // No fallar la operación principal por errores en notificaciones
+  });
+  
+  set(state => {
+    const updatedNotifications = [newNotification, ...state.notifications];
+    const newUnreadCount = updatedNotifications.filter(n => !n.read).length;
     
-    set(state => {
-      const updatedNotifications = [newNotification, ...state.notifications];
-      const newUnreadCount = updatedNotifications.filter(n => !n.read).length;
-      
-      return {
-        notifications: updatedNotifications,
-        unreadCount: newUnreadCount
-      };
-    });
-  },
+    return {
+      notifications: updatedNotifications,
+      unreadCount: newUnreadCount
+    };
+  });
+},
 
   // Marcar como leída (solo local)
   markAsRead: (id: string) => {

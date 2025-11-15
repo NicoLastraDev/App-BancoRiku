@@ -1,5 +1,5 @@
 // components/NuevoDestinatarioModal.tsx
-import { useAuthStore } from '@/presentation/auth/store/useAuthStore'
+import bancoApi from '@/core/api/BancoApi'
 import { useDestinatariosStore } from '@/presentation/destinatarios/store/useDestinatariosStore'
 import { Ionicons } from '@expo/vector-icons'
 import React, { useState } from 'react'
@@ -33,7 +33,6 @@ const NuevoDestinatarioModal = ({ visible, onClose, onDestinatarioAgregado }: Nu
   const [buscando, setBuscando] = useState(false)
   
   const { crearDestinatario, loading } = useDestinatariosStore()
-  const { token } = useAuthStore()
 
   const buscarCuenta = async () => {
     if (!numeroCuenta.trim()) {
@@ -41,55 +40,26 @@ const NuevoDestinatarioModal = ({ visible, onClose, onDestinatarioAgregado }: Nu
       return
     }
 
-    if (!token) {
-      Alert.alert('Error', 'No hay sesión activa')
-      return
-    }
-
     setBuscando(true)
     setCuentaEncontrada(null)
 
     try {
-      console.log('🌐 Buscando cuenta:', numeroCuenta)
+      console.log('🔍 Buscando cuenta:', numeroCuenta)
       
-      const response = await fetch('http://192.168.1.6:4000/api/beneficiarios/search', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          numero_cuenta: numeroCuenta
-        })
+      const numeroCuentaLimpio = numeroCuenta.replace(/\s+/g, '').replace(/-/g, '')
+      
+      // ✅ USAR bancoApi COMO EN OTRAS PANTALLAS
+      const { data } = await bancoApi.post('/beneficiarios/search', {
+        numero_cuenta: numeroCuentaLimpio
       })
 
-      console.log('📡 Response status:', response.status)
-      
-      const responseText = await response.text()
-      console.log('📄 Response completo:', responseText)
+      console.log('✅ Respuesta del servidor:', data)
 
-      if (responseText.includes('<!DOCTYPE') || responseText.includes('<html') || responseText.trim().startsWith('<')) {
-        console.log('❌ El servidor devolvió HTML en lugar de JSON')
-        Alert.alert('Error del Servidor', 'El endpoint /api/beneficiarios/search no está funcionando. Verifica el backend.')
-        return
-      }
-
-      let data
-      try {
-        data = JSON.parse(responseText)
-        console.log('✅ JSON parseado:', data)
-      } catch (parseError) {
-        console.log('❌ No se pudo parsear JSON:', parseError)
-        Alert.alert('Error', 'El servidor respondió con un formato inválido')
-        return
-      }
-
-      if (response.ok && data.success) {
-        console.log('✅ Cuenta encontrada:', data.data)
+      if (data.success && data.data) {
         setCuentaEncontrada({
           nombre: data.data.nombre,
           tipoCuenta: data.data.tipo_cuenta,
-          banco: 'Banco Riku',
+          banco: data.data.banco || 'Banco Riku',
           numeroCuenta: data.data.numero_cuenta,
           usuarioId: data.data.usuario_id
         })
@@ -98,8 +68,23 @@ const NuevoDestinatarioModal = ({ visible, onClose, onDestinatarioAgregado }: Nu
       }
 
     } catch (error: any) {
-      console.log('❌ Error de red:', error)
-      Alert.alert('Error', 'No se pudo conectar con el servidor: ' + error.message)
+      console.log('❌ Error buscando cuenta:', error)
+      
+      // ✅ MANEJO DE ERRORES COMO EN OTRAS PANTALLAS
+      if (error.response?.status === 404) {
+        Alert.alert('Cuenta no encontrada', 'No existe una cuenta con ese número')
+      } else if (error.response?.status === 401) {
+        Alert.alert('Sesión expirada', 'Por favor inicia sesión nuevamente')
+      } else if (error.response?.data?.message) {
+        Alert.alert('Error', error.response.data.message)
+      } else if (error.code === 'NETWORK_ERROR' || error.message?.includes('Network Error')) {
+        Alert.alert(
+          'Error de conexión', 
+          'No se pudo conectar al servidor. Verifica tu conexión a internet.'
+        )
+      } else {
+        Alert.alert('Error', 'No se pudo buscar la cuenta. Intenta nuevamente.')
+      }
     } finally {
       setBuscando(false)
     }
@@ -117,6 +102,7 @@ const NuevoDestinatarioModal = ({ visible, onClose, onDestinatarioAgregado }: Nu
         nombre_cuenta: cuentaEncontrada.nombre
       }
 
+      // ✅ USAR EL STORE COMO EN OTRAS PANTALLAS
       await crearDestinatario(datosDestinatario)
       
       Alert.alert('Éxito', 'Destinatario agregado correctamente')
@@ -128,7 +114,8 @@ const NuevoDestinatarioModal = ({ visible, onClose, onDestinatarioAgregado }: Nu
       onClose()
       
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'No se pudo agregar el destinatario')
+      // El error ya se maneja en el store, no necesitamos Alert aquí
+      console.log('❌ Error en agregarDestinatario:', error)
     }
   }
 
@@ -156,7 +143,6 @@ const NuevoDestinatarioModal = ({ visible, onClose, onDestinatarioAgregado }: Nu
         style={{ flex: 1 }}
         keyboardVerticalOffset={Platform.OS === 'ios' ? -50 : 0}
       >
-        {/* Overlay que cierra teclado al tocar */}
         <TouchableWithoutFeedback onPress={dismissKeyboard}>
           <View className="flex-1 bg-black/50">
             <TouchableOpacity 
@@ -167,11 +153,10 @@ const NuevoDestinatarioModal = ({ visible, onClose, onDestinatarioAgregado }: Nu
           </View>
         </TouchableWithoutFeedback>
         
-        {/* Hoja Inferior - Más alta para mejor visibilidad */}
         <View 
           className="bg-white rounded-t-3xl absolute bottom-0 left-0 right-0"
           style={{
-            height: SCREEN_HEIGHT * 0.75, // Más alto para mejor visibilidad
+            height: SCREEN_HEIGHT * 0.75,
             maxHeight: SCREEN_HEIGHT * 0.85,
             shadowColor: '#000',
             shadowOffset: {
@@ -196,14 +181,14 @@ const NuevoDestinatarioModal = ({ visible, onClose, onDestinatarioAgregado }: Nu
             </TouchableOpacity>
           </View>
 
-          {/* Contenido con scroll - Más compacto */}
+          {/* Contenido con scroll */}
           <ScrollView 
             className="flex-1 p-4"
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={{ paddingBottom: 20 }}
           >
-            {/* Campo de búsqueda - Más prominente */}
+            {/* Campo de búsqueda */}
             <View className="mb-6">
               <Text className="text-gray-700 mb-3 font-semibold text-base">Número de Cuenta</Text>
               <View className="flex-row">

@@ -107,15 +107,35 @@ export const useAuthStore = create<authState>()((set, get) => ({
 },
 
   logout: async() => {
-    console.log('🚪 logout - Plataforma:', Platform.OS);
-    await universalStorage.deleteItem('userToken') // ✅ CAMBIADO
+  console.log('🚪 [LOGOUT] Iniciando proceso de logout...');
+  
+  try {
+    // 1. Limpiar storage primero
+    console.log('🗑️ Eliminando token del storage...');
+    await universalStorage.deleteItem('userToken');
+    
+    // 2. Limpiar estado de Zustand
+    console.log('🔄 Limpiando estado del store...');
     set({
       status: "unauthenticathed", 
       token: undefined, 
       user: undefined,
       cuenta: undefined
-    })
-  },
+    });
+    
+    console.log('✅ [LOGOUT] Proceso completado exitosamente');
+    
+  } catch (error) {
+    console.log('❌ [LOGOUT] Error durante el logout:', error);
+    // Forzar limpieza incluso si hay error
+    set({
+      status: "unauthenticathed", 
+      token: undefined, 
+      user: undefined,
+      cuenta: undefined
+    });
+  }
+},
 
   register: async(nombre: string, email: string, password: string) => {
     try {

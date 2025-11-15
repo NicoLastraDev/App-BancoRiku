@@ -6,7 +6,7 @@ import { create } from "zustand";
 interface TransferenciaState {
   cuentas: Cuenta[];
   transferencias: Transferencia[];
-  tarjetas: Tarjeta[]; // ✅ Ya está definido
+  tarjetas: Tarjeta[];
   loading: boolean;
   error: string | null;
   success: boolean;
@@ -18,7 +18,7 @@ interface TransferenciaActions {
   // Datos
   obtenerCuentas: (token: string) => Promise<void>;
   obtenerTransferencias: (token: string) => Promise<void>;
-  obtenerTarjetas: (token: string) => Promise<void>; // ✅ Agregar esta acción
+  obtenerTarjetas: (token: string) => Promise<void>;
   
   // Transferencia
   realizarTransferencia: (data: CreateTransferenciaData, token: string) => Promise<boolean>;
@@ -26,13 +26,13 @@ interface TransferenciaActions {
   // Verificación de cuenta
   verificarCuentaDestino: (accountNumber: string, token: string) => Promise<void>;
   
-  // Validación
+  // Validación - CORREGIDO
   validarTransferencia: (fromAccountId: number, amount: number, toAccountNumber: string) => { isValid: boolean; errors: string[] };
   
   // Utilidades
   obtenerCuentaPorId: (accountId: number) => Cuenta | undefined;
   obtenerSaldoDisponible: (accountId: number) => number;
-  obtenerTarjetaPorId: (id: number) => Tarjeta | undefined; // ✅ Agregar esta utilidad
+  obtenerTarjetaPorId: (id: number) => Tarjeta | undefined;
   
   // Estado
   clearError: () => void;
@@ -44,7 +44,7 @@ export const useTransferenciaStore = create<TransferenciaState & TransferenciaAc
   // Estado inicial
   cuentas: [],
   transferencias: [],
-  tarjetas: [], // ✅ Inicializar tarjetas vacío
+  tarjetas: [],
   loading: false,
   error: null,
   success: false,
@@ -73,7 +73,7 @@ export const useTransferenciaStore = create<TransferenciaState & TransferenciaAc
     }
   },
 
-  // ✅ Obtener tarjetas del usuario (NUEVA ACCIÓN)
+  // Obtener tarjetas del usuario
   obtenerTarjetas: async (token: string) => {
     set({ loading: true, error: null });
     try {
@@ -84,56 +84,59 @@ export const useTransferenciaStore = create<TransferenciaState & TransferenciaAc
     }
   },
 
-  // Realizar transferencia
- realizarTransferencia: async (data: CreateTransferenciaData, token: string): Promise<boolean> => {
-  set({ loading: true, error: null, success: false });
-  
-  try {
-    const validation = get().validarTransferencia(data.fromAccountId, data.amount, data.toAccountNumber);
-    if (!validation.isValid) {
-      throw new Error(validation.errors.join(', '));
-    }
-
-    const transferencia = await transferenciaActions.realizarTransferencia(data, token);
+  // Realizar transferencia - CORREGIDO
+  realizarTransferencia: async (data: CreateTransferenciaData, token: string): Promise<boolean> => {
+    set({ loading: true, error: null, success: false });
     
-    // Actualizar estado
-    set(state => ({
-      cuentas: state.cuentas.map(cuenta =>
-        cuenta.id === data.fromAccountId
-          ? { ...cuenta, saldo: cuenta.saldo - data.amount }
-          : cuenta
-      ),
-      transferencias: [transferencia, ...state.transferencias],
-      loading: false,
-      success: true,
-      infoCuentaDestino: null
-    }));
-
-    // ✅ NOTIFICACIÓN DE TRANSFERENCIA EXITOSA
-    useNotificationStore.getState().addNotification({
-      type: 'success',
-      title: 'Transferencia realizada',
-      message: `Enviaste $${data.amount} a cuenta ${data.toAccountNumber}`,
-      action: { 
-        type: 'transferencia',
-        data: transferencia 
+    try {
+      // ✅ CORREGIR: Usar data.cuenta_destino en lugar de data.toAccountNumber
+      const toAccountNumber = data.cuenta_destino.toString();
+      const validation = get().validarTransferencia(data.fromAccountId, data.monto, toAccountNumber);
+      
+      if (!validation.isValid) {
+        throw new Error(validation.errors.join(', '));
       }
-    });
 
-    return true;
-  } catch (error: any) {
-    set({ error: error.message, loading: false });
-    
-    // ✅ NOTIFICACIÓN DE ERROR EN TRANSFERENCIA
-    useNotificationStore.getState().addNotification({
-      type: 'error',
-      title: 'Error en transferencia',
-      message: error.message
-    });
-    
-    return false;
-  }
-},
+      const transferencia = await transferenciaActions.realizarTransferencia(data, token);
+      
+      // Actualizar estado
+      set(state => ({
+        cuentas: state.cuentas.map(cuenta =>
+          cuenta.id === data.fromAccountId
+            ? { ...cuenta, saldo: cuenta.saldo - data.monto }
+            : cuenta
+        ),
+        transferencias: [transferencia, ...state.transferencias],
+        loading: false,
+        success: true,
+        infoCuentaDestino: null
+      }));
+
+      // ✅ NOTIFICACIÓN DE TRANSFERENCIA EXITOSA
+      useNotificationStore.getState().addNotification({
+        type: 'success',
+        title: 'Transferencia realizada',
+        message: `Enviaste $${data.monto} a cuenta ${data.cuenta_destino}`,
+        action: { 
+          type: 'transferencia',
+          data: transferencia 
+        }
+      });
+
+      return true;
+    } catch (error: any) {
+      set({ error: error.message, loading: false });
+      
+      // ✅ NOTIFICACIÓN DE ERROR EN TRANSFERENCIA
+      useNotificationStore.getState().addNotification({
+        type: 'error',
+        title: 'Error en transferencia',
+        message: error.message
+      });
+      
+      return false;
+    }
+  },
 
   // Verificar cuenta destino
   verificarCuentaDestino: async (accountNumber: string, token: string) => {
@@ -221,7 +224,7 @@ export const useTransferenciaStore = create<TransferenciaState & TransferenciaAc
     return cuenta ? cuenta.saldo : 0;
   },
 
-  // ✅ Obtener tarjeta por ID (NUEVA UTILIDAD)
+  // Obtener tarjeta por ID
   obtenerTarjetaPorId: (id: number) => {
     return get().tarjetas.find(tarjeta => tarjeta.id === id);
   },

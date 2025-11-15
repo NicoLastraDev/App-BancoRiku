@@ -17,6 +17,8 @@ export interface CreateTransferenciaData {
   cuenta_destino: number;
   monto: number;
   descripcion?: string;
+   fromAccountId: number;     // ✅ AGREGAR ESTA LÍNEA
+  cuenta_origen?: string;
 }
 
 export interface Cuenta {

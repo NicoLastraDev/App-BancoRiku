@@ -1,7 +1,7 @@
 import { useAuthStore } from '@/presentation/auth/store/useAuthStore';
 import { Link, router } from 'expo-router';
-import { useState } from 'react';
-import { Alert, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useRef, useState } from 'react';
+import { Alert, Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 const RegisterScreen = () => {
   const [nombre, setNombre] = useState('')
@@ -9,6 +9,7 @@ const RegisterScreen = () => {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false)
+  const navigationAttempted = useRef(false); // 🔒 Previene múltiples navegaciones
 
   const { register } = useAuthStore()
 
@@ -22,8 +23,49 @@ const RegisterScreen = () => {
     return regex.test(email)
   }
 
+  const handleSuccessfulRegistration = () => {
+    if (navigationAttempted.current) {
+      console.log('⚠️ Navegación ya intentada, evitando duplicado');
+      return;
+    }
+    
+    navigationAttempted.current = true;
+    
+    console.log('✅ Registro exitoso, preparando navegación...');
+    
+    // Estrategia multi-capas para navegación robusta
+    if (Platform.OS === 'web') {
+      // ✅ Estrategia para Web
+      const navigateToHome = () => {
+        console.log('🌐 Navegando en web...');
+        router.replace('/(banco-app)/(home)');
+      };
+      
+      // Intentar navegación inmediata
+      navigateToHome();
+      
+      // Backup: intentar nuevamente después de un delay
+      setTimeout(navigateToHome, 100);
+      
+    } else {
+      // ✅ Estrategia para Mobile
+      Alert.alert('Éxito', 'Cuenta creada correctamente', [
+        { 
+          text: 'OK', 
+          onPress: () => {
+            console.log('📱 Navegando en mobile...');
+            router.replace('/(banco-app)/(home)');
+          }
+        }
+      ]);
+    }
+  }
+
   const onRegister = async () => {
-    // CORRECCIÓN: Cambié "confirmPassword" a "!confirmPassword"
+    // Reset flag al iniciar nuevo intento
+    navigationAttempted.current = false;
+
+    // Validaciones
     if (!nombre || !email || !password || !confirmPassword) {
       Alert.alert('Error', 'Todos los campos son obligatorios')
       return
@@ -47,23 +89,28 @@ const RegisterScreen = () => {
     setLoading(true)
 
     try {
+      console.log('🔄 Iniciando proceso de registro...');
       const wasSuccessful = await register(nombre, email, password)
 
       if (wasSuccessful) {
-        Alert.alert('Éxito', 'Cuenta creada correctamente', [
-          { 
-            text: 'OK', 
-            onPress: () => router.replace('/(banco-app)/(home)') //evita que el usuario regrese a la pantalla de registro
-          }
-        ]);
-        return
+        console.log('✅ Registro exitoso en store');
+        
+        // Pequeño delay para asegurar que el estado de auth se actualice completamente
+        setTimeout(() => {
+          handleSuccessfulRegistration();
+        }, 50);
+        
+        return;
       }
 
-      Alert.alert('Error', 'No se pudo registrar. El usuario puede que ya exista.')
+      console.log('❌ Registro falló en store');
+      Alert.alert('Error', 'No se pudo registrar. El usuario puede que ya exista.');
+      
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'No se pudo registrar')
+      console.error('💥 Error en registro:', error);
+      Alert.alert('Error', error.message || 'No se pudo registrar');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
@@ -128,7 +175,6 @@ const RegisterScreen = () => {
             />
           </View>
 
-          {/* CORRECCIÓN: Texto del botón simplificado */}
           <TouchableOpacity 
             className="bg-blue-600 p-4 rounded-lg mt-6 w-full mb-4 items-center justify-center"
             onPress={onRegister}
