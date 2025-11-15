@@ -60,20 +60,36 @@ export const useAuthStore = create<authState>()((set, get) => ({
   },
 
   login: async(email: string, password: string) => {
-    console.log('🔄 Store: login llamado con email:', email, 'Plataforma:', Platform.OS);
-    
+  console.log('🔄 Store: login llamado con email:', email);
+  
+  try {
     const resp = await authLogin(email, password)
     
     console.log('📦 Store: respuesta de authLogin:', resp);
-    console.log('👤 Store: user object:', resp?.user);
-    console.log('🆔 Store: user ID:', resp?.user?.id);
-    console.log('🔑 Store: token:', resp?.token);
     
-    console.log('🎯 ANTES de changeStatus - user tiene id?:', !!resp?.user?.id);
-    console.log('🎯 user completo:', resp?.user);
+    if (resp?.token && resp?.user) {
+      return await get().changeStatus(resp.token, resp.user)
+    } else {
+      // ❌ Login falló pero no hubo error de excepción
+      console.log('❌ Login falló - respuesta inválida:', resp);
+      return false;
+    }
     
-    return get().changeStatus(resp?.token, resp?.user)
-  },
+  } catch (error: any) {
+    console.log('❌ ERROR en store login:', error);
+    
+    // ✅ MANEJAR ERROR 401 ESPECÍFICAMENTE
+    if (error.response?.status === 401) {
+      console.log('🔐 Error 401 - Credenciales inválidas');
+      // No necesitamos hacer set de estado aquí, solo retornar false
+      return false;
+    }
+    
+    // Para otros errores, también retornar false
+    console.log('🌐 Otro tipo de error:', error.message);
+    return false;
+  }
+},
 
   checkStatus: async() => {
   console.log('🔍 checkStatus - INICIANDO');

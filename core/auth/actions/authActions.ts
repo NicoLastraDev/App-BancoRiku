@@ -51,8 +51,14 @@ export const authLogin = async (email: string, password: string) => {
   try {
     console.log('🚀 authLogin - Haciendo request...');
     
-    // ✅ CAMBIAR: Agregar /api/
-    const response = await bancoApi.post('/auth/login', { email, password });
+    // ✅ LIMPIAR Y VALIDAR EMAIL
+    email = email.toLowerCase().trim();
+    
+    const response = await bancoApi.post('/auth/login', { 
+      email, 
+      password 
+    });
+    
     console.log('✅ authLogin - Respuesta del backend:', response.data);
     
     const result = returnUserToken(response.data);
@@ -64,8 +70,15 @@ export const authLogin = async (email: string, password: string) => {
     });
     
     return result;
-  } catch (error) {
-    console.log('❌ authLogin - Error:', error);
+    
+  } catch (error: any) {
+    console.log('❌ authLogin - Error:', {
+      message: error.message,
+      status: error.response?.status,
+      data: error.response?.data
+    });
+    
+    // ✅ PROPAGAR EL ERROR PARA QUE EL STORE LO MANEJE
     throw error;
   }
 };
