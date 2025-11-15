@@ -1,5 +1,4 @@
 import bancoApi from "@/core/api/BancoApi";
-import { Alert } from "react-native";
 import { User } from "../interfaces/user";
 
 export interface AuthResponse {
@@ -83,42 +82,24 @@ export const authLogin = async (email: string, password: string) => {
   }
 };
 
-export const authRegister = async(nombre: string, email: string, password: string) => {
-  email = email.toLowerCase()
-  console.log('🔄 [FRONTEND 1] authRegister llamado:', email);
-
+export const authRegister = async (nombre: string, email: string, password: string) => {
   try {
-    console.log('🔄 [FRONTEND 2] Enviando request a /auth/register');
+    console.log('📤 Enviando registro al backend...');
     
-    // ✅ CAMBIAR: Agregar /api/
-    const {data} = await bancoApi.post('/auth/register', {
-      nombre,
-      email, 
-      password
-    })
-
-    console.log('✅ [FRONTEND 3] Registro EXITOSO:', data);
-    const result = returnUserToken(data);
-    
-    useNotificationStore.getState().addNotification({
-      type: 'success',
-      title: '¡Cuenta creada!',
-      message: 'Tu cuenta ha sido creada exitosamente'
+    const response = await bancoApi.post('/auth/register', {
+      nombre: nombre,  // ← Usar "name" en lugar de "nombre"
+      email: email,
+      password: password
     });
-    
-    return result;
+
+    console.log('✅ Respuesta del servidor (register):', response.data);
+    return response.data;
 
   } catch (error: any) {
-    console.log('❌ [FRONTEND ERROR] En registro:', error.response?.data);
-    const errorMessage = error.response?.data?.message || 'Ha fallado la creación del usuario';
+    console.log('🔴 Error en authRegister:', error);
+    console.log('🔴 Data del error:', error.response?.data);
+    console.log('🔴 Status:', error.response?.status);
     
-    useNotificationStore.getState().addNotification({
-      type: 'error',
-      title: 'Error en registro',
-      message: errorMessage
-    });
-    
-    Alert.alert('Error', errorMessage);
-    return null
+    throw error;
   }
-}
+};

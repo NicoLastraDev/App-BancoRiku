@@ -105,14 +105,27 @@ const RegisterScreen = () => {
       console.error('💥 Error en registro:', error);
       
       // Manejo específico de errores
-      if (error.message === 'CREDENCIALES_INCORRECTAS' || error.message === 'USER_ALREADY_EXISTS') {
-        showAlert('Error', 'El correo electrónico ya está registrado.');
-      } else if (error.message.includes('Network') || error.message.includes('CONEXION')) {
-        showAlert('Error de conexión', 'No se pudo conectar con el servidor. Verifica tu conexión a internet.');
-      } else {
-        showAlert('Error', error.message || 'No se pudo completar el registro');
-      }
-    } finally {
+      switch (error.message) {
+    case 'USER_ALREADY_EXISTS':
+      showAlert('Error', 'El correo electrónico ya está registrado.');
+      break;
+    case 'ERROR_SERVIDOR':
+      showAlert('Error del servidor', 'Problema temporal. Intenta nuevamente en unos minutos.');
+      break;
+    case 'ERROR_CONEXION':
+      showAlert('Error de conexión', 'No se pudo conectar con el servidor. Verifica tu internet.');
+      break;
+    case 'DATOS_INVALIDOS':
+      showAlert('Error', 'Los datos ingresados no son válidos.');
+      break;
+    default:
+      // Mostrar mensaje específico del servidor si está disponible
+      const serverMessage = error.response?.data?.message;
+      showAlert('Error', serverMessage || 'No se pudo completar el registro');
+  }
+}
+    
+    finally {
       setLoading(false);
     }
   }

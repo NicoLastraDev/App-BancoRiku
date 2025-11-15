@@ -157,17 +157,59 @@ export const useAuthStore = create<authState>()((set, get) => ({
 },
 
   register: async(nombre: string, email: string, password: string) => {
-    try {
-      const resp = await authRegister(nombre, email, password)
-      if (resp?.token) {
-        return await get().changeStatus(resp.token, resp.user)
+  console.log('🔄 Store: register llamado con:', { nombre, email, password: '***' });
+  
+  try {
+    const resp = await authRegister(nombre, email, password)
+    console.log('📦 Store: respuesta de authRegister:', resp);
+    
+    // ✅ VERIFICACIÓN MÁS ROBUSTA
+    if (resp?.token && resp?.user) {
+      console.log('✅ Registro exitoso, llamando changeStatus');
+      return await get().changeStatus(resp.token, resp.user)
+    } else {
+      console.log('❌ Registro falló - respuesta incompleta:', resp);
+      
+      // Manejar errores específicos del backend
+      if (resp?.message?.includes('ya existe') || resp?.success === false) {
+        throw new Error('USER_ALREADY_EXISTS');
       }
-      return false
-    } catch (err) {
-      console.log(err)
-      return false
+      throw new Error('REGISTRO_FALLIDO');
     }
-  },
+  } catch (error: any) {
+    console.log('❌ ERROR en store register:', error);
+    
+    // ✅ MANEJAR ERRORES ESPECÍFICOS DEL BACKEND
+    if (error.response?.status === 400) {
+      console.log('🔐 Error 400 - Datos inválidos');
+      throw new Error('DATOS_INVALIDOS');
+    }
+    
+    if (error.response?.status === 409) {
+      console.log('🔐 Error 409 - Usuario ya existe');
+      throw new Error('USER_ALREADY_EXISTS');
+    }
+    
+    if (error.response?.status === 500) {
+      console.log('🔐 Error 500 - Problema del servidor');
+      const serverMessage = error.response?.data?.message;
+      throw new Error(serverMessage || 'ERROR_SERVIDOR');
+    }
+    
+    // Manejar errores de red
+    if (error.message?.includes('Network') || error.code === 'NETWORK_ERROR') {
+      throw new Error('ERROR_CONEXION');
+    }
+    
+    // Si el error ya tiene un mensaje específico, usarlo
+    if (error.message && error.message !== 'Request failed with status code 500') {
+      throw error;
+    }
+    
+    // Error genérico
+    throw new Error('ERROR_REGISTRO');
+  }
+},
 
   setCuenta: (cuenta: Cuenta) => {
     set({ cuenta })
