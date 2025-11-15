@@ -70,9 +70,9 @@ export const useAuthStore = create<authState>()((set, get) => ({
     if (resp?.token && resp?.user) {
       return await get().changeStatus(resp.token, resp.user)
     } else {
-      // ❌ Login falló pero no hubo error de excepción
-      console.log('❌ Login falló - respuesta inválida:', resp);
-      return false;
+      // ❌ Login falló - lanzar error específico
+      console.log('❌ Login falló - credenciales incorrectas');
+      throw new Error('CREDENCIALES_INCORRECTAS');
     }
     
   } catch (error: any) {
@@ -81,13 +81,16 @@ export const useAuthStore = create<authState>()((set, get) => ({
     // ✅ MANEJAR ERROR 401 ESPECÍFICAMENTE
     if (error.response?.status === 401) {
       console.log('🔐 Error 401 - Credenciales inválidas');
-      // No necesitamos hacer set de estado aquí, solo retornar false
-      return false;
+      throw new Error('CREDENCIALES_INCORRECTAS');
     }
     
-    // Para otros errores, también retornar false
-    console.log('🌐 Otro tipo de error:', error.message);
-    return false;
+    // ✅ MANEJAR ERRORES DE RED
+    if (error.message?.includes('Network') || error.code === 'NETWORK_ERROR') {
+      throw new Error('ERROR_CONEXION');
+    }
+    
+    // ✅ RELANZAR OTROS ERRORES
+    throw error;
   }
 },
 

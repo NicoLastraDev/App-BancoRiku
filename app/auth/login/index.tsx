@@ -1,7 +1,7 @@
 import { useAuthStore } from '@/presentation/auth/store/useAuthStore';
 import { Link, router } from 'expo-router';
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 const LoginScreen = () => {
   const { login } = useAuthStore();
@@ -11,6 +11,15 @@ const LoginScreen = () => {
     password: '',
   })
 
+  // Función para mostrar alerts compatibles con web
+  const showAlert = (title: string, message: string) => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && window.alert) {
+      window.alert(`${title}\n\n${message}`);
+    } else {
+      Alert.alert(title, message);
+    }
+  };
+
   const onLogin = async () => {
     const { email, password } = form;
 
@@ -18,14 +27,14 @@ const LoginScreen = () => {
 
     // Validaciones básicas
     if (email.length === 0 || password.length === 0) {
-      Alert.alert('Error', 'Por favor completa todos los campos');
+      showAlert('Error', 'Por favor completa todos los campos');
       return;
     }
 
     // Validar formato de email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      Alert.alert('Error', 'Por favor ingresa un email válido');
+      showAlert('Error', 'Por favor ingresa un email válido');
       return;
     }
 
@@ -40,7 +49,7 @@ const LoginScreen = () => {
         return;
       } else {
         // ❌ Login falló (credenciales incorrectas)
-        Alert.alert(
+        showAlert(
           'Error de acceso', 
           'El correo electrónico o la contraseña son incorrectos. Por favor verifica tus credenciales.'
         );
@@ -49,7 +58,7 @@ const LoginScreen = () => {
     } catch (error: any) {
       // ✅ CAPTURAR CUALQUIER ERROR INESPERADO
       console.log('💥 Error inesperado en onLogin:', error);
-      Alert.alert(
+      showAlert(
         'Error de conexión', 
         'No se pudo conectar con el servidor. Verifica tu conexión a internet.'
       );
