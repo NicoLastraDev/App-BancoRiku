@@ -211,7 +211,7 @@ const ejecutarLogout = async () => {
       <View className="pt-12 px-4 pb-4 bg-gray-50">
         <View className="flex-row justify-between items-center">
           <View className="flex-1">
-            <Text className="text-2xl font-bold text-gray-800">Banco Riku</Text>
+            <Text className="text-2xl font-bold text-blue-600 ">Banco Riku</Text>
             <Text className="text-gray-600 mt-1">¡Hola {user?.nombre}!</Text>
           </View>
           

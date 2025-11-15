@@ -47,21 +47,38 @@ const LoginScreen = () => {
         console.log('✅ Login exitoso, navegando a home...');
         router.replace('/(banco-app)/(home)');
         return;
-      } else {
-        // ❌ Login falló (credenciales incorrectas)
-        showAlert(
-          'Error de acceso', 
-          'El correo electrónico o la contraseña son incorrectos. Por favor verifica tus credenciales.'
-        );
       }
       
+      // ❌ Esta línea probablemente nunca se ejecuta porque el store LANZA error
+      console.log('❌ Login retornó false (no debería pasar)');
+      
     } catch (error: any) {
-      // ✅ CAPTURAR CUALQUIER ERROR INESPERADO
-      console.log('💥 Error inesperado en onLogin:', error);
-      showAlert(
-        'Error de conexión', 
-        'No se pudo conectar con el servidor. Verifica tu conexión a internet.'
-      );
+      console.log('💥 Error capturado en onLogin:', error.message);
+      
+      // ✅ MANEJO ESPECÍFICO DE ERRORES
+      switch (error.message) {
+        case 'CREDENCIALES_INCORRECTAS':
+          showAlert(
+            'Error de acceso', 
+            'El correo electrónico o la contraseña son incorrectos. Por favor verifica tus credenciales.'
+          );
+          break;
+          
+        case 'ERROR_CONEXION':
+          showAlert(
+            'Error de conexión', 
+            'No se pudo conectar con el servidor. Verifica tu conexión a internet.'
+          );
+          break;
+          
+        default:
+          // Para cualquier otro error inesperado
+          console.log('💥 Error inesperado en onLogin:', error);
+          showAlert(
+            'Error', 
+            error.message || 'Ocurrió un error inesperado. Por favor intenta nuevamente.'
+          );
+      }
     } finally {
       setIsPosting(false);
     }
@@ -130,14 +147,16 @@ const LoginScreen = () => {
 
         {/* Enlaces */}
         <View className="w-full mt-4">
-          <TouchableOpacity className="w-full mb-2">
-            <Text className="text-blue-500 text-center">¿Olvidaste tu contraseña?</Text>
+          <TouchableOpacity className="w-full mb-2" disabled={isPosting}>
+            <Text className={`text-blue-500 text-center ${isPosting ? 'opacity-50' : ''}`}>
+              ¿Olvidaste tu contraseña?
+            </Text>
           </TouchableOpacity>
           
           <View className="w-full justify-center">
             <Link href="/auth/register" asChild>
-              <TouchableOpacity>
-                <Text className="text-blue-600 text-center">
+              <TouchableOpacity disabled={isPosting}>
+                <Text className={`text-blue-600 text-center ${isPosting ? 'opacity-50' : ''}`}>
                   ¿No tienes cuenta? ¡Regístrate!
                 </Text>
               </TouchableOpacity>
