@@ -23,7 +23,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptiveIcon.png",
+        "foregroundImage": "./assets/images/Logo_banco_riku.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
