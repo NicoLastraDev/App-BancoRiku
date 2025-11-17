@@ -1,4 +1,4 @@
-package com.anonymous.bancoriku
+package com.bancoriku
 
 import android.os.Build
 import android.os.Bundle
