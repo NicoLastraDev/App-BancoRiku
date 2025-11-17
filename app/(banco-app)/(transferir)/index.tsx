@@ -282,6 +282,7 @@ const TransferirScreen = ({ onClose }: { onClose?: () => void }) => {
                     saldoInsuficiente ? 'border-red-300 bg-red-50' : 'border-gray-200'
                   }`}
                   placeholder="0"
+                  maxLength={80}
                   placeholderTextColor="#9CA3AF"
                   keyboardType="decimal-pad"
                   value={amount}
